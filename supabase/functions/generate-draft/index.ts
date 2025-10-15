@@ -79,8 +79,17 @@ Format your response as JSON:
     }
 
     const data = await response.json();
-    const generatedText = data.choices[0].message.content;
+    console.log('OpenAI response:', JSON.stringify(data));
     
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid OpenAI response structure:', data);
+      return new Response(
+        JSON.stringify({ error: 'Invalid response from OpenAI API', details: data }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const generatedText = data.choices[0].message.content;
     console.log('Generated text:', generatedText);
 
     // Try to parse as JSON, fallback to text parsing
