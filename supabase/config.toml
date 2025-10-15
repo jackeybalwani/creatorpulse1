@@ -1,0 +1,5 @@
+[functions.generate-draft]
+verify_jwt = false
+
+[secrets]
+OPENAI_API_KEY = "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"

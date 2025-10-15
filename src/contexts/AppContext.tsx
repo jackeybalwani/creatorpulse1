@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Source, Trend, Draft, UserPreferences } from '@/lib/types';
 import { sourcesStorage, trendsStorage, draftsStorage, preferencesStorage } from '@/lib/storage';
-import { generateMockTrends, generateMockDraft } from '@/lib/mockData';
-import { generateNewsletterDraft } from '@/lib/aiGenerator';
+import { generateMockTrends } from '@/lib/mockData';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 interface AppContextType {
@@ -64,7 +64,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const currentTrends = trendsStorage.getAll();
-      const { subject, content } = await generateNewsletterDraft(currentTrends, preferences);
+      
+      const { data, error } = await supabase.functions.invoke('generate-draft', {
+        body: { 
+          trends: currentTrends,
+          preferences 
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const { subject, content } = data;
       
       const newDraft: Omit<Draft, 'id'> = {
         subject,
