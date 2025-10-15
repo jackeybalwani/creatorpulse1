@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Source, Trend, Draft, UserPreferences } from '@/lib/types';
 import { sourcesStorage, trendsStorage, draftsStorage, preferencesStorage } from '@/lib/storage';
 import { generateMockTrends, generateMockDraft } from '@/lib/mockData';
+import { generateNewsletterDraft } from '@/lib/aiGenerator';
+import { toast } from '@/hooks/use-toast';
 
 interface AppContextType {
   sources: Source[];
@@ -11,7 +13,7 @@ interface AppContextType {
   addSource: (source: Omit<Source, 'id' | 'addedAt'>) => void;
   updateSource: (id: string, updates: Partial<Source>) => void;
   deleteSource: (id: string) => void;
-  generateDraft: () => void;
+  generateDraft: () => Promise<void>;
   updateDraft: (id: string, updates: Partial<Draft>) => void;
   updatePreferences: (preferences: Partial<UserPreferences>) => void;
   refreshTrends: () => void;
@@ -54,11 +56,40 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSources(sourcesStorage.getAll());
   };
 
-  const generateDraft = () => {
-    const currentTrends = trendsStorage.getAll();
-    const newDraft = generateMockDraft(currentTrends);
-    draftsStorage.add(newDraft);
-    setDrafts(draftsStorage.getAll());
+  const generateDraft = async () => {
+    try {
+      toast({
+        title: "Generating draft...",
+        description: "AI is analyzing trends and creating your newsletter",
+      });
+
+      const currentTrends = trendsStorage.getAll();
+      const { subject, content } = await generateNewsletterDraft(currentTrends, preferences);
+      
+      const newDraft: Omit<Draft, 'id'> = {
+        subject,
+        content,
+        status: 'pending',
+        generatedAt: new Date().toISOString(),
+        scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        trendIds: currentTrends.slice(0, 5).map(t => t.id),
+      };
+      
+      draftsStorage.add(newDraft);
+      setDrafts(draftsStorage.getAll());
+      
+      toast({
+        title: "Draft generated!",
+        description: "Your AI-powered newsletter is ready for review",
+      });
+    } catch (error) {
+      console.error('Error generating draft:', error);
+      toast({
+        title: "Generation failed",
+        description: "Failed to generate draft. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const updateDraft = (id: string, updates: Partial<Draft>) => {
