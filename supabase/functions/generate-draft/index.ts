@@ -23,6 +23,14 @@ serve(async (req) => {
       );
     }
 
+    if (!openAIApiKey) {
+      console.error('OPENAI_API_KEY is not set');
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key is not configured. Please set OPENAI_API_KEY in Supabase secrets.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Prepare trends summary
     const trendsSummary = trends.slice(0, 5).map((t: any, i: number) => 
       `${i + 1}. ${t.title}: ${t.description} (${t.mentions} mentions, sentiment: ${t.sentiment})`
@@ -71,9 +79,13 @@ Format your response as JSON:
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('OpenAI API error:', error);
+      console.error('OpenAI API error:', response.status, error);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate draft with OpenAI' }),
+        JSON.stringify({ 
+          error: 'Failed to generate draft with OpenAI', 
+          details: error,
+          status: response.status 
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
