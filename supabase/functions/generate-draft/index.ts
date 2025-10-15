@@ -14,9 +14,15 @@ serve(async (req) => {
   }
 
   try {
-    const { trends, preferences } = await req.json();
+    const body = await req.json();
+    console.log('Received body:', JSON.stringify(body));
+    
+    const { trends, preferences } = body;
+    console.log('Trends:', trends ? `${trends.length} items` : 'missing');
+    console.log('Preferences:', preferences ? 'present' : 'missing');
 
     if (!trends || !preferences) {
+      console.error('Validation failed - trends:', !!trends, 'preferences:', !!preferences);
       return new Response(
         JSON.stringify({ error: 'Missing required fields: trends and preferences' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
