@@ -3,8 +3,29 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { FileText, Clock, TrendingUp, CheckCircle2, Sparkles, Calendar } from "lucide-react";
+import { useApp } from "@/contexts/AppContext";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
+  const { sources, trends, drafts, generateDraft } = useApp();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const latestDraft = drafts[drafts.length - 1];
+  const activeSources = sources.filter(s => s.isActive).length;
+  const approvedDrafts = drafts.filter(d => d.status === 'reviewed').length;
+  const acceptanceRate = drafts.length > 0 ? Math.round((approvedDrafts / drafts.length) * 100) : 0;
+
+  const handleGenerateDraft = () => {
+    generateDraft();
+    toast({
+      title: "Draft Generated!",
+      description: "Your new newsletter draft is ready for review.",
+    });
+    navigate("/drafts");
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Hero Section */}
@@ -14,16 +35,22 @@ const Dashboard = () => {
           <div className="flex items-start justify-between">
             <div className="space-y-2">
               <h1 className="text-4xl font-bold tracking-tight">Good morning! ☀️</h1>
-              <p className="text-lg text-muted-foreground">Your next newsletter draft is ready for review</p>
+              <p className="text-lg text-muted-foreground">
+                {latestDraft 
+                  ? "Your newsletter draft is ready for review" 
+                  : "Generate your first newsletter draft"}
+              </p>
             </div>
-            <Badge className="bg-accent text-accent-foreground">Next delivery in 18h</Badge>
+            {latestDraft && latestDraft.status === 'pending' && (
+              <Badge className="bg-accent text-accent-foreground">Next delivery in 18h</Badge>
+            )}
           </div>
           <div className="mt-6 flex gap-3">
-            <Button size="lg" className="gap-2">
+            <Button size="lg" className="gap-2" onClick={() => navigate("/drafts")}>
               <FileText className="h-4 w-4" />
-              Review Draft
+              {latestDraft ? 'Review Draft' : 'View Drafts'}
             </Button>
-            <Button size="lg" variant="outline" className="gap-2">
+            <Button size="lg" variant="outline" className="gap-2" onClick={handleGenerateDraft}>
               <Sparkles className="h-4 w-4" />
               Generate New
             </Button>
@@ -51,9 +78,9 @@ const Dashboard = () => {
             <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">78%</div>
+            <div className="text-2xl font-bold">{acceptanceRate}%</div>
             <p className="text-xs text-muted-foreground">drafts approved with minimal edits</p>
-            <Progress value={78} className="mt-2" />
+            <Progress value={acceptanceRate} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -63,7 +90,7 @@ const Dashboard = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{activeSources}</div>
             <p className="text-xs text-muted-foreground">Twitter, YouTube, RSS feeds</p>
           </CardContent>
         </Card>
@@ -74,7 +101,7 @@ const Dashboard = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{drafts.filter(d => d.status === 'sent').length}</div>
             <p className="text-xs text-muted-foreground">this month</p>
           </CardContent>
         </Card>
@@ -87,31 +114,39 @@ const Dashboard = () => {
           <CardDescription>Your AI-generated newsletter drafts</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {[
-              { title: "Weekly AI Roundup - Jan 15", status: "Ready", time: "Generated 2h ago", acceptance: "pending" },
-              { title: "Tech Trends Newsletter - Jan 8", status: "Sent", time: "Sent 7 days ago", acceptance: "approved" },
-              { title: "Creator Economy Insights - Jan 1", status: "Sent", time: "Sent 14 days ago", acceptance: "approved" },
-            ].map((draft, index) => (
-              <div key={index} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <FileText className="h-5 w-5 text-primary" />
+          {drafts.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">No drafts yet. Generate your first one!</p>
+              <Button onClick={handleGenerateDraft} className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Generate Draft
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {drafts.slice(-3).reverse().map((draft) => (
+                <div key={draft.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{draft.subject}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Generated {new Date(draft.generatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{draft.title}</p>
-                    <p className="text-sm text-muted-foreground">{draft.time}</p>
+                  <div className="flex items-center gap-3">
+                    <Badge variant={draft.status === "reviewed" ? "default" : "secondary"}>
+                      {draft.status === 'pending' ? 'Ready' : draft.status === 'reviewed' ? 'Approved' : 'Sent'}
+                    </Badge>
+                    <Button variant="ghost" size="sm" onClick={() => navigate("/drafts")}>View</Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={draft.acceptance === "approved" ? "default" : "secondary"}>
-                    {draft.status}
-                  </Badge>
-                  <Button variant="ghost" size="sm">View</Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -125,28 +160,25 @@ const Dashboard = () => {
           <CardDescription>Emerging trends detected from your sources</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { topic: "AI Agents", heat: 95 },
-              { topic: "GPT-5 Rumors", heat: 87 },
-              { topic: "Creator Tools", heat: 76 },
-              { topic: "Web3 Revival", heat: 68 },
-              { topic: "Video AI", heat: 62 },
-              { topic: "Open Source LLMs", heat: 58 },
-            ].map((trend, index) => (
-              <Badge
-                key={index}
-                variant="outline"
-                className="px-3 py-1.5 text-sm"
-                style={{
-                  background: `linear-gradient(135deg, hsl(38 92% 50% / ${trend.heat / 100}), hsl(45 98% 55% / ${trend.heat / 100}))`,
-                  borderColor: `hsl(38 92% 50% / ${trend.heat / 100})`,
-                }}
-              >
-                🔥 {trend.topic}
-              </Badge>
-            ))}
-          </div>
+          {trends.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No trends detected yet. Add sources to start tracking trends.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {trends.slice(0, 6).map((trend) => (
+                <Badge
+                  key={trend.id}
+                  variant="outline"
+                  className="px-3 py-1.5 text-sm"
+                  style={{
+                    background: `linear-gradient(135deg, hsl(38 92% 50% / ${trend.sentiment}), hsl(45 98% 55% / ${trend.sentiment}))`,
+                    borderColor: `hsl(38 92% 50% / ${trend.sentiment})`,
+                  }}
+                >
+                  🔥 {trend.title}
+                </Badge>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

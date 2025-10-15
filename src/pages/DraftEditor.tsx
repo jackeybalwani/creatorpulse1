@@ -4,10 +4,69 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useApp } from "@/contexts/AppContext";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const DraftEditor = () => {
+  const { drafts, trends, updateDraft } = useApp();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  
+  const latestDraft = drafts[drafts.length - 1];
+  const [subject, setSubject] = useState(latestDraft?.subject || '');
+  const [content, setContent] = useState(latestDraft?.content || '');
+
+  useEffect(() => {
+    if (latestDraft) {
+      setSubject(latestDraft.subject);
+      setContent(latestDraft.content);
+    }
+  }, [latestDraft]);
+
+  if (!latestDraft) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground mb-4">No drafts available yet.</p>
+            <Button onClick={() => navigate("/")}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Generate Your First Draft
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const handleSave = () => {
+    updateDraft(latestDraft.id, { subject, content });
+    toast({
+      title: "Draft Saved!",
+      description: "Your changes have been saved.",
+    });
+  };
+
+  const handleApprove = () => {
+    updateDraft(latestDraft.id, { 
+      status: 'reviewed',
+      subject, 
+      content,
+      feedback: {
+        rating: feedback === 'up' ? 5 : 3,
+        comments: feedback === 'up' ? 'Good draft' : 'Needs improvement',
+        improvements: [],
+      }
+    });
+    toast({
+      title: "Draft Approved!",
+      description: "Your newsletter has been scheduled for delivery.",
+    });
+    navigate("/");
+  };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -20,7 +79,7 @@ const DraftEditor = () => {
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="gap-1">
             <Calendar className="h-3 w-3" />
-            Scheduled: Tomorrow 8:00 AM
+            Scheduled: {new Date(latestDraft.scheduledFor).toLocaleString()}
           </Badge>
         </div>
       </div>
@@ -33,7 +92,7 @@ const DraftEditor = () => {
           </div>
           <div className="flex-1">
             <p className="font-medium">AI-Generated Draft</p>
-            <p className="text-sm text-muted-foreground">Based on 12 sources • 6 trending topics detected</p>
+            <p className="text-sm text-muted-foreground">Based on {trends.length} trending topics detected</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -71,23 +130,8 @@ const DraftEditor = () => {
             <Textarea
               className="resize-none font-medium"
               rows={2}
-              defaultValue="🚀 Weekly AI Roundup: GPT-5 Rumors, AI Agents Rise, and the Creator Economy Boom"
-            />
-          </div>
-
-          <Separator />
-
-          {/* Intro */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Introduction</label>
-            <Textarea
-              className="resize-none"
-              rows={4}
-              defaultValue="Hey there! 👋
-
-This week has been absolutely wild in the AI space. From whispers about GPT-5 to the explosion of AI agents, there's so much happening. I've aggregated the most important developments from 12 of my favorite sources so you don't have to.
-
-Let's dive in..."
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
             />
           </div>
 
@@ -95,88 +139,54 @@ Let's dive in..."
 
           {/* Main Content */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Main Content</label>
+            <label className="text-sm font-medium">Content</label>
             <Textarea
-              className="resize-none min-h-[300px]"
-              rows={12}
-              defaultValue="## 🔥 Top Stories This Week
-
-### AI Agents Are Taking Over
-The rise of autonomous AI agents is accelerating faster than anyone predicted. From coding assistants to customer service bots, we're seeing practical applications everywhere.
-
-**Key Insights:**
-- Major companies investing billions in agent frameworks
-- Open-source community building accessible tools
-- Real-world ROI now measured in weeks, not months
-
-**Why it matters:** This isn't hype—agents are solving real problems today.
-
----
-
-### GPT-5: Separating Fact from Fiction
-Rumors are swirling about OpenAI's next flagship model. Here's what we actually know vs. speculation.
-
-**Confirmed:**
-- Training is ongoing with massive compute
-- Focus on reasoning and reliability
-
-**Speculation:**
-- 10x parameter count (unlikely)
-- Multimodal from the ground up (probable)
-
-**My take:** Expect iterative improvements rather than a quantum leap.
-
----
-
-### The Creator Economy Gets an AI Boost
-Tools that once took teams to build are now accessible to solo creators. The democratization is real.
-
-**Trending Tools:**
-- AI video editors saving hours per project
-- Voice cloning for multilingual content
-- Auto-scheduling optimized by engagement data
-
-This is just the beginning..."
+              className="resize-none min-h-[500px] font-mono text-sm"
+              rows={20}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Trends to Watch Section */}
-      <Card className="border-accent/30 bg-accent/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-accent" />
-            Trends to Watch
-          </CardTitle>
-          <CardDescription>AI-curated emerging topics from your sources</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Textarea
-            className="resize-none"
-            rows={6}
-            defaultValue="🔍 **Emerging Trends:**
-
-• **Open Source LLM Momentum** - Community models closing the gap with proprietary ones
-• **AI Regulation Heats Up** - EU AI Act implementation details emerging  
-• **Video Generation Goes Mainstream** - Tools now accessible to everyday creators
-• **RAG Architecture Evolution** - Better context management at scale
-• **AI Safety Debates Intensify** - Industry split on approach"
-          />
-        </CardContent>
-      </Card>
+      {/* Trends Used */}
+      {latestDraft.trendIds.length > 0 && (
+        <Card className="border-accent/30 bg-accent/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-accent" />
+              Trends Included
+            </CardTitle>
+            <CardDescription>These trending topics were used to generate this draft</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {trends
+                .filter(t => latestDraft.trendIds.includes(t.id))
+                .map(trend => (
+                  <Badge key={trend.id} variant="outline">
+                    {trend.title}
+                  </Badge>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-between p-6 rounded-lg border bg-card">
         <div>
           <p className="font-medium">Ready to send?</p>
-          <p className="text-sm text-muted-foreground">This draft will be delivered tomorrow at 8:00 AM</p>
+          <p className="text-sm text-muted-foreground">
+            This draft will be delivered on {new Date(latestDraft.scheduledFor).toLocaleString()}
+          </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" size="lg">
+          <Button variant="outline" size="lg" onClick={handleSave}>
             Save Draft
           </Button>
-          <Button size="lg" className="gap-2">
+          <Button size="lg" className="gap-2" onClick={handleApprove}>
             <Send className="h-4 w-4" />
             Approve & Schedule
           </Button>
