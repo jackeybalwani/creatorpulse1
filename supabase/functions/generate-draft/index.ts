@@ -17,9 +17,10 @@ serve(async (req) => {
     const body = await req.json();
     console.log('Received body:', JSON.stringify(body));
     
-    const { trends, preferences } = body;
+    const { trends, preferences, pastNewsletters = [] } = body;
     console.log('Trends:', trends ? `${trends.length} items` : 'missing');
     console.log('Preferences:', preferences ? 'present' : 'missing');
+    console.log('Past newsletters:', pastNewsletters.length);
 
     if (!trends || !preferences) {
       console.error('Validation failed - trends:', !!trends, 'preferences:', !!preferences);
@@ -42,7 +43,14 @@ serve(async (req) => {
       `${i + 1}. ${t.title}: ${t.description} (${t.mentions} mentions, sentiment: ${t.sentiment})`
     ).join('\n');
 
-    const systemPrompt = `You are a professional newsletter writer. Create engaging, informative newsletter content that captures reader attention.`;
+    // Build style training context from past newsletters
+    const styleContext = pastNewsletters.length > 0 
+      ? `\n\nPast newsletter examples for style reference:\n${pastNewsletters.map((n: any, i: number) => 
+          `Example ${i + 1}:\n${n.content.substring(0, 500)}...`
+        ).join('\n\n')}`
+      : '';
+
+    const systemPrompt = `You are a professional newsletter writer. Create engaging, informative newsletter content that captures reader attention. ${styleContext ? 'Use the provided examples to match the writing style.' : ''}`;
 
     const userPrompt = `Write a newsletter draft based on these trending topics:
 
@@ -51,7 +59,7 @@ ${trendsSummary}
 Writing Style: ${preferences.writingStyle}
 Tone: ${preferences.tone}
 Length: ${preferences.length}
-Focus Topics: ${preferences.topics.join(', ')}
+Focus Topics: ${preferences.topics.join(', ')}${styleContext}
 
 Generate a newsletter with:
 1. A compelling subject line (max 60 characters)

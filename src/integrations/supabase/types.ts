@@ -14,11 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      draft_feedback: {
+        Row: {
+          comments: string | null
+          created_at: string
+          draft_id: string
+          edit_timestamp: string
+          edited_content: string | null
+          edited_subject: string | null
+          id: string
+          original_content: string | null
+          original_subject: string | null
+          rating: number | null
+          user_id: string
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string
+          draft_id: string
+          edit_timestamp?: string
+          edited_content?: string | null
+          edited_subject?: string | null
+          id?: string
+          original_content?: string | null
+          original_subject?: string | null
+          rating?: number | null
+          user_id: string
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string
+          draft_id?: string
+          edit_timestamp?: string
+          edited_content?: string | null
+          edited_subject?: string | null
+          id?: string
+          original_content?: string | null
+          original_subject?: string | null
+          rating?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       drafts: {
         Row: {
           content: string
           created_at: string
           id: string
+          scheduled_for: string | null
           sent_at: string | null
           status: string | null
           subject: string
@@ -29,6 +72,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          scheduled_for?: string | null
           sent_at?: string | null
           status?: string | null
           subject: string
@@ -39,10 +83,89 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          scheduled_for?: string | null
           sent_at?: string | null
           status?: string | null
           subject?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      past_newsletters: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          sent_date: string | null
+          title: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          sent_date?: string | null
+          title: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          sent_date?: string | null
+          title?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sources: {
+        Row: {
+          added_at: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          name: string
+          sync_error: string | null
+          sync_status: string | null
+          tracked_count: number
+          type: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          name: string
+          sync_error?: string | null
+          sync_status?: string | null
+          tracked_count?: number
+          type: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          name?: string
+          sync_error?: string | null
+          sync_status?: string | null
+          tracked_count?: number
+          type?: string
+          updated_at?: string
+          url?: string
           user_id?: string
         }
         Relationships: []

@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.send-newsletter]
 verify_jwt = true
+
+[functions.sync-sources]
+verify_jwt = false
+
+[functions.scheduled-draft-generator]
+verify_jwt = false
+
+[functions.scheduled-email-sender]
+verify_jwt = false
