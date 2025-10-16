@@ -4,17 +4,43 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Twitter, Youtube, Rss, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { Twitter, Youtube, Rss, Plus, Trash2, CheckCircle2, RefreshCw, Loader2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { SourceType } from "@/lib/types";
+import { supabase } from "@/integrations/supabase/client";
 
 const Sources = () => {
   const { sources, addSource, updateSource, deleteSource } = useApp();
   const { toast } = useToast();
   const [sourceType, setSourceType] = useState<SourceType>('twitter');
   const [sourceUrl, setSourceUrl] = useState('');
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSyncSources = async () => {
+    setSyncing(true);
+    try {
+      const { error } = await supabase.functions.invoke('sync-sources');
+      
+      if (error) throw error;
+
+      toast({
+        title: "Sources synced successfully!",
+        description: "All active sources have been checked for new content",
+      });
+
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error: any) {
+      toast({
+        title: "Sync failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleAddSource = () => {
     if (!sourceUrl.trim()) {
@@ -55,6 +81,17 @@ const Sources = () => {
           <h1 className="text-3xl font-bold tracking-tight">Content Sources</h1>
           <p className="text-muted-foreground mt-1">Manage your connected sources for trend detection</p>
         </div>
+        <Button
+          onClick={handleSyncSources}
+          disabled={syncing || sources.length === 0}
+          className="gap-2"
+        >
+          {syncing ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> Syncing...</>
+          ) : (
+            <><RefreshCw className="h-4 w-4" /> Sync Now</>
+          )}
+        </Button>
       </div>
 
       {/* Add New Source */}

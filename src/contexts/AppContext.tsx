@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Source, Trend, Draft, UserPreferences, DraftStatus } from '@/lib/types';
+import { Source, Trend, Draft, UserPreferences, DraftStatus, SourceType } from '@/lib/types';
 import { sourcesStorage } from '@/lib/storage';
 import { generateMockTrends } from '@/lib/mockData';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,8 +56,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
 
     const loadData = async () => {
-      // Load sources from localStorage (not in DB yet)
-      setSources(sourcesStorage.getAll());
+      // Load sources from database
+      const { data: sourcesData } = await supabase
+        .from('sources')
+        .select('*')
+        .order('added_at', { ascending: false });
+      
+      if (sourcesData) {
+        setSources(sourcesData.map(s => ({
+          id: s.id,
+          type: s.type as SourceType,
+          name: s.name,
+          url: s.url,
+          isActive: s.is_active,
+          trackedCount: s.tracked_count,
+          addedAt: s.added_at,
+          lastSyncAt: s.last_sync_at,
+          syncStatus: s.sync_status as any,
+          syncError: s.sync_error,
+        })));
+      }
 
       // Load trends from database
       const { data: trendsData } = await supabase
@@ -99,9 +117,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           id: d.id,
           subject: d.subject,
           content: d.content,
-          status: d.status === 'sent' ? 'sent' : d.status === 'reviewed' ? 'reviewed' : 'pending' as DraftStatus,
+          status: d.status as DraftStatus,
           generatedAt: d.created_at,
-          scheduledFor: d.created_at,
+          scheduledFor: d.scheduled_for || d.created_at,
+          sentAt: d.sent_at,
           trendIds: [],
         })));
       }
@@ -138,19 +157,58 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     loadData();
   }, [user]);
 
-  const addSource = (source: Omit<Source, 'id' | 'addedAt'>) => {
-    const newSource = sourcesStorage.add(source);
-    setSources(sourcesStorage.getAll());
+  const addSource = async (source: Omit<Source, 'id' | 'addedAt'>) => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('sources')
+      .insert({
+        user_id: user.id,
+        type: source.type,
+        name: source.name,
+        url: source.url,
+        is_active: source.isActive,
+        tracked_count: source.trackedCount,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setSources([...sources, {
+        id: data.id,
+        type: data.type as SourceType,
+        name: data.name,
+        url: data.url,
+        isActive: data.is_active,
+        trackedCount: data.tracked_count,
+        addedAt: data.added_at,
+      }]);
+    }
   };
 
-  const updateSource = (id: string, updates: Partial<Source>) => {
-    sourcesStorage.update(id, updates);
-    setSources(sourcesStorage.getAll());
+  const updateSource = async (id: string, updates: Partial<Source>) => {
+    const { error } = await supabase
+      .from('sources')
+      .update({
+        is_active: updates.isActive,
+        tracked_count: updates.trackedCount,
+      })
+      .eq('id', id);
+
+    if (!error) {
+      setSources(sources.map(s => s.id === id ? { ...s, ...updates } : s));
+    }
   };
 
-  const deleteSource = (id: string) => {
-    sourcesStorage.delete(id);
-    setSources(sourcesStorage.getAll());
+  const deleteSource = async (id: string) => {
+    const { error } = await supabase
+      .from('sources')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      setSources(sources.filter(s => s.id !== id));
+    }
   };
 
   const generateDraft = async () => {

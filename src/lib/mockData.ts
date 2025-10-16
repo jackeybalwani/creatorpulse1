@@ -66,7 +66,7 @@ Stay ahead of the curve, and keep creating!
 
 Best,
 Your CreatorPulse AI`,
-    status: 'pending',
+    status: 'draft',
     generatedAt: new Date().toISOString(),
     scheduledFor: new Date(new Date().setHours(8, 0, 0, 0) + 24 * 60 * 60 * 1000).toISOString(),
     trendIds: trends.slice(0, 2).map(t => t.id),

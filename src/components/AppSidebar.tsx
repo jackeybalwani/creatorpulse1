@@ -1,4 +1,4 @@
-import { Home, FileText, Rss, TrendingUp, Settings, Sparkles, LogOut } from "lucide-react";
+import { Home, FileText, Rss, TrendingUp, Settings, Sparkles, LogOut, PenTool } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ const navItems = [
   { title: "Draft Editor", url: "/drafts", icon: FileText },
   { title: "Sources", url: "/sources", icon: Rss },
   { title: "Trends", url: "/trends", icon: TrendingUp },
+  { title: "Writing Style", url: "/writing-style", icon: PenTool },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

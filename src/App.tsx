@@ -14,6 +14,7 @@ import Trends from "./pages/Trends";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import WritingStyleTrainer from "./pages/WritingStyleTrainer";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ const App = () => (
                       <Route path="/sources" element={<Sources />} />
                       <Route path="/trends" element={<Trends />} />
                       <Route path="/settings" element={<Settings />} />
+                      <Route path="/writing-style" element={<WritingStyleTrainer />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Layout>

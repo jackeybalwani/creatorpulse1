@@ -41,7 +41,7 @@ const Dashboard = () => {
                   : "Generate your first newsletter draft"}
               </p>
             </div>
-            {latestDraft && latestDraft.status === 'pending' && (
+            {latestDraft && latestDraft.status === 'draft' && (
               <Badge className="bg-accent text-accent-foreground">Next delivery in 18h</Badge>
             )}
           </div>
@@ -139,7 +139,7 @@ const Dashboard = () => {
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant={draft.status === "reviewed" ? "default" : "secondary"}>
-                      {draft.status === 'pending' ? 'Ready' : draft.status === 'reviewed' ? 'Approved' : 'Sent'}
+                      {draft.status === 'draft' ? 'Ready' : draft.status === 'reviewed' ? 'Approved' : 'Sent'}
                     </Badge>
                     <Button variant="ghost" size="sm" onClick={() => navigate("/drafts")}>View</Button>
                   </div>
