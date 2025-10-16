@@ -15,6 +15,7 @@ interface AppContextType {
   deleteSource: (id: string) => void;
   generateDraft: () => Promise<void>;
   updateDraft: (id: string, updates: Partial<Draft>) => void;
+  sendDraft: (id: string) => Promise<void>;
   updatePreferences: (preferences: Partial<UserPreferences>) => void;
   refreshTrends: () => void;
 }
@@ -233,6 +234,68 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDrafts(drafts.map(d => d.id === id ? { ...d, ...updates } : d));
   };
 
+  const sendDraft = async (id: string) => {
+    if (!user) return;
+    
+    const draft = drafts.find(d => d.id === id);
+    if (!draft) {
+      toast({
+        title: "Error",
+        description: "Draft not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!preferences.emailAddress) {
+      toast({
+        title: "Email not configured",
+        description: "Please set your email address in Settings first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('send-newsletter', {
+        body: {
+          to: preferences.emailAddress,
+          subject: draft.subject,
+          content: draft.content,
+        },
+      });
+
+      if (error) throw error;
+
+      // Update draft status to sent
+      await supabase
+        .from('drafts')
+        .update({
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      setDrafts(drafts.map(d => 
+        d.id === id 
+          ? { ...d, status: 'sent' as DraftStatus } 
+          : d
+      ));
+
+      toast({
+        title: "Newsletter sent!",
+        description: `Your newsletter has been sent to ${preferences.emailAddress}`,
+      });
+    } catch (error) {
+      console.error('Error sending newsletter:', error);
+      toast({
+        title: "Send failed",
+        description: "Failed to send newsletter. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
     if (!user) return;
 
@@ -290,6 +353,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         deleteSource,
         generateDraft,
         updateDraft,
+        sendDraft,
         updatePreferences,
         refreshTrends,
       }}

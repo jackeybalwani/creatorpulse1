@@ -10,10 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 const DraftEditor = () => {
-  const { drafts, trends, updateDraft } = useApp();
+  const { drafts, trends, updateDraft, sendDraft } = useApp();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const [isSending, setIsSending] = useState(false);
   
   const latestDraft = drafts[drafts.length - 1];
   const [subject, setSubject] = useState(latestDraft?.subject || '');
@@ -65,6 +66,13 @@ const DraftEditor = () => {
       title: "Draft Approved!",
       description: "Your newsletter has been scheduled for delivery.",
     });
+    navigate("/");
+  };
+
+  const handleSend = async () => {
+    setIsSending(true);
+    await sendDraft(latestDraft.id);
+    setIsSending(false);
     navigate("/");
   };
 
@@ -179,16 +187,19 @@ const DraftEditor = () => {
         <div>
           <p className="font-medium">Ready to send?</p>
           <p className="text-sm text-muted-foreground">
-            This draft will be delivered on {new Date(latestDraft.scheduledFor).toLocaleString()}
+            Send now or approve for scheduled delivery
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" size="lg" onClick={handleSave}>
             Save Draft
           </Button>
-          <Button size="lg" className="gap-2" onClick={handleApprove}>
-            <Send className="h-4 w-4" />
+          <Button variant="outline" size="lg" className="gap-2" onClick={handleApprove}>
             Approve & Schedule
+          </Button>
+          <Button size="lg" className="gap-2" onClick={handleSend} disabled={isSending}>
+            <Send className="h-4 w-4" />
+            {isSending ? 'Sending...' : 'Send Now'}
           </Button>
         </div>
       </div>
