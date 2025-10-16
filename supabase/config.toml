@@ -1,1 +1,4 @@
 project_id = "cmqbmzsjassajujsdlfg"
+
+[functions.generate-draft]
+verify_jwt = false
