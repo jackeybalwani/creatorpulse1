@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,9 +92,9 @@ export default function WritingStyleTrainer() {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     loadPastNewsletters();
-  });
+  }, []);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
