@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@4.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,55 +24,69 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending newsletter to:", to);
 
-    const emailResponse = await resend.emails.send({
-      from: "Newsletter <onboarding@resend.dev>",
-      to: [to],
-      subject: subject,
-      html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-                line-height: 1.6;
-                color: #333;
-                max-width: 600px;
-                margin: 0 auto;
-                padding: 20px;
-              }
-              .content {
-                background: #ffffff;
-                padding: 30px;
-                border-radius: 8px;
-              }
-              .footer {
-                margin-top: 40px;
-                padding-top: 20px;
-                border-top: 1px solid #eee;
-                font-size: 12px;
-                color: #999;
-                text-align: center;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="content">
-              ${content}
-            </div>
-            <div class="footer">
-              <p>You're receiving this newsletter because you subscribed to our updates.</p>
-            </div>
-          </body>
-        </html>
-      `,
+    const emailResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Newsletter <onboarding@resend.dev>",
+        to: [to],
+        subject: subject,
+        html: `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body {
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+                  line-height: 1.6;
+                  color: #333;
+                  max-width: 600px;
+                  margin: 0 auto;
+                  padding: 20px;
+                }
+                .content {
+                  background: #ffffff;
+                  padding: 30px;
+                  border-radius: 8px;
+                }
+                .footer {
+                  margin-top: 40px;
+                  padding-top: 20px;
+                  border-top: 1px solid #eee;
+                  font-size: 12px;
+                  color: #999;
+                  text-align: center;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="content">
+                ${content}
+              </div>
+              <div class="footer">
+                <p>You're receiving this newsletter because you subscribed to our updates.</p>
+              </div>
+            </body>
+          </html>
+        `,
+      }),
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    if (!emailResponse.ok) {
+      const error = await emailResponse.text();
+      console.error("Resend API error:", error);
+      throw new Error(`Failed to send email: ${error}`);
+    }
 
-    return new Response(JSON.stringify(emailResponse), {
+    const result = await emailResponse.json();
+    console.log("Email sent successfully:", result);
+
+    return new Response(JSON.stringify(result), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
