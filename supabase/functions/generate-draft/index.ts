@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,10 +29,10 @@ serve(async (req) => {
       );
     }
 
-    if (!openAIApiKey) {
-      console.error('OPENAI_API_KEY is not set');
+    if (!lovableApiKey) {
+      console.error('LOVABLE_API_KEY is not set');
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key is not configured. Please set OPENAI_API_KEY in Supabase secrets.' }),
+        JSON.stringify({ error: 'Lovable AI key is not configured.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -65,30 +65,28 @@ Format your response as JSON:
   "content": "Full newsletter content here with proper formatting"
 }`;
 
-    console.log('Calling OpenAI API...');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log('Calling Lovable AI...');
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
-        max_tokens: 1000,
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('OpenAI API error:', response.status, error);
+      console.error('Lovable AI error:', response.status, error);
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to generate draft with OpenAI', 
+          error: 'Failed to generate draft with Lovable AI', 
           details: error,
           status: response.status 
         }),
@@ -97,12 +95,12 @@ Format your response as JSON:
     }
 
     const data = await response.json();
-    console.log('OpenAI response:', JSON.stringify(data));
+    console.log('Lovable AI response:', JSON.stringify(data));
     
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid OpenAI response structure:', data);
+      console.error('Invalid Lovable AI response structure:', data);
       return new Response(
-        JSON.stringify({ error: 'Invalid response from OpenAI API', details: data }),
+        JSON.stringify({ error: 'Invalid response from Lovable AI', details: data }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
