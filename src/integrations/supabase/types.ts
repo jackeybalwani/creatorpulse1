@@ -14,7 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      drafts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          status: string | null
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          status?: string | null
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          status?: string | null
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trends: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string
+          detected_at: string
+          id: string
+          mentions: number | null
+          sentiment: number | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description: string
+          detected_at?: string
+          id?: string
+          mentions?: number | null
+          sentiment?: number | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string
+          detected_at?: string
+          id?: string
+          mentions?: number | null
+          sentiment?: number | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          delivery_time: string | null
+          email_address: string | null
+          id: string
+          length: string | null
+          tone: string | null
+          topics: string[] | null
+          updated_at: string
+          user_id: string
+          writing_style: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_time?: string | null
+          email_address?: string | null
+          id?: string
+          length?: string | null
+          tone?: string | null
+          topics?: string[] | null
+          updated_at?: string
+          user_id: string
+          writing_style?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_time?: string | null
+          email_address?: string | null
+          id?: string
+          length?: string | null
+          tone?: string | null
+          topics?: string[] | null
+          updated_at?: string
+          user_id?: string
+          writing_style?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
