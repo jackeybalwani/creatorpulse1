@@ -88,6 +88,25 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
+            
+            {!isSignUp && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setEmail('test@creatorpulse.com');
+                  setPassword('TestUser123!');
+                  toast({
+                    title: "Test credentials loaded",
+                    description: "Click Sign In to continue",
+                  });
+                }}
+              >
+                Use Test Account
+              </Button>
+            )}
+            
             <Button
               type="button"
               variant="ghost"

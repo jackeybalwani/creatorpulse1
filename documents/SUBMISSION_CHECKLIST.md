@@ -172,8 +172,23 @@ You may want to capture:
 - [ ] Verify all Mermaid diagrams render correctly
 - [ ] Ensure statistics match actual implementation
 - [ ] Test all documentation links
+- [ ] **Create test account** (test@creatorpulse.com / TestUser123!)
+- [ ] Add sample data to test account (sources, drafts, preferences)
 - [ ] Record demo video (2-3 minutes)
 - [ ] Prepare for Q&A questions
+
+### Test Account Setup
+**IMPORTANT:** Evaluators need a test account to access the application.
+
+1. Sign up with credentials:
+   - Email: `test@creatorpulse.com`
+   - Password: `TestUser123!`
+2. Add sample sources (YouTube, podcasts, blogs)
+3. Generate a draft newsletter
+4. Configure preferences and writing style
+5. Upload a past newsletter for AI training
+
+See `TEST_CREDENTIALS.md` for complete instructions.
 
 ### Potential Questions to Prepare For
 1. **Why this tech stack?** - Rapid development, security, scalability

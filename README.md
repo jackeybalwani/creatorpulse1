@@ -1,4 +1,13 @@
-# Welcome to CreatorPulse project
+# CreatorPulse - AI-Powered Newsletter Generator
+
+**CreatorPulse** is an intelligent newsletter creation platform that helps content creators transform trending topics into personalized newsletters using AI.
+
+## 🎯 Test Account for Evaluation
+
+For quick testing and evaluation:
+- **Email**: `test@creatorpulse.com`
+- **Password**: `TestUser123!`
+- See [TEST_CREDENTIALS.md](./TEST_CREDENTIALS.md) for detailed setup instructions
 
 ## Project info
 
