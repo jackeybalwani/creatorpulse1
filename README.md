@@ -4,7 +4,7 @@
 
 ## 🚀 Live Demo
 
-**Access the app**: [Your Deployed App Link Here]
+**Access the app**: https://creatorpulse1.lovable.app/
 
 ## 🎯 Test Account for Evaluation
 
