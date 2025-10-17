@@ -6,10 +6,6 @@
 
 **Tagline:** Save 80-90% of newsletter creation time with intelligent automation
 
-**Student Name:** [Your Name]  
-**Course:** Product Management & Development  
-**Date:** December 2024
-
 ---
 
 ## Slide 2: Problem Statement
@@ -469,30 +465,4 @@ Show complete workflow from login to newsletter generation in under 5 minutes
 - AI: Lovable AI Gateway (GPT-5, Gemini 2.5)
 
 **Thank you for your attention!**
-
----
-
-## Presentation Notes
-
-### Timing Guide (for 10-15 minute presentation)
-- Slides 1-3: 2 minutes (Introduction & Problem)
-- Slides 4-8: 3 minutes (Features & Solution)
-- Slides 9-12: 2 minutes (Architecture & Security)
-- Slides 13-17: 3 minutes (Flows & Learning)
-- Slides 18-23: 3 minutes (Implementation & Reflection)
-- Slides 24-25: 2 minutes (Demo & Q&A)
-
-### Key Points to Emphasize
-1. Time savings metric (80-90%)
-2. Security-first implementation
-3. AI personalization without external APIs
-4. End-to-end automation
-5. Production-ready architecture
-
-### Demo Tips
-- Pre-load the application
-- Have test data ready
-- Show smooth workflow
-- Highlight key features
-- Keep it under 3 minutes
 
