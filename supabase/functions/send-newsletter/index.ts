@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import DOMPurify from "https://esm.sh/isomorphic-dompurify@2.14.0";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -23,6 +24,14 @@ const handler = async (req: Request): Promise<Response> => {
     const { to, subject, content }: SendNewsletterRequest = await req.json();
 
     console.log("Sending newsletter to:", to);
+
+    // Sanitize content to prevent XSS attacks
+    const sanitizedContent = DOMPurify.sanitize(content, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre'],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
+      ALLOW_DATA_ATTR: false,
+      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    });
 
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -66,7 +75,7 @@ const handler = async (req: Request): Promise<Response> => {
             </head>
             <body>
               <div class="content">
-                ${content}
+                ${sanitizedContent}
               </div>
               <div class="footer">
                 <p>You're receiving this newsletter because you subscribed to our updates.</p>
