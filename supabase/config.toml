@@ -1,13 +1,13 @@
 project_id = "cmqbmzsjassajujsdlfg"
 
 [functions.generate-draft]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-newsletter]
 verify_jwt = true
 
 [functions.sync-sources]
-verify_jwt = false
+verify_jwt = true
 
 [functions.scheduled-draft-generator]
 verify_jwt = false

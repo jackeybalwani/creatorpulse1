@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import DOMPurify from "https://esm.sh/isomorphic-dompurify@2.14.0";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -14,6 +15,13 @@ interface SendNewsletterRequest {
   content: string;
 }
 
+// Validation schema
+const sendNewsletterSchema = z.object({
+  to: z.string().email('Invalid email format').max(255),
+  subject: z.string().min(1, 'Subject required').max(200),
+  content: z.string().min(1, 'Content required').max(100000),
+});
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -21,7 +29,24 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, subject, content }: SendNewsletterRequest = await req.json();
+    // Validate input
+    const body = await req.json();
+    let validatedData;
+    
+    try {
+      validatedData = sendNewsletterSchema.parse(body);
+    } catch (validationError) {
+      console.error('Validation error:', validationError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input data', 
+          details: validationError instanceof z.ZodError ? validationError.errors : 'Validation failed'
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { to, subject, content }: SendNewsletterRequest = validatedData;
 
     console.log("Sending newsletter to:", to);
 
