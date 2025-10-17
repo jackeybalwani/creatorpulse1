@@ -3,6 +3,7 @@ import { Source, Trend, Draft, UserPreferences, DraftStatus, SourceType } from '
 import { sourcesStorage } from '@/lib/storage';
 import { generateMockTrends } from '@/lib/mockData';
 import { supabase } from '@/integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
 
 interface AppContextType {
@@ -34,17 +35,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     deliveryTime: '08:00',
     emailAddress: '',
   });
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   // Auth listener
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       setUser(session?.user ?? null);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
       setUser(session?.user ?? null);
     });
 
