@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Source, Trend, Draft, UserPreferences, DraftStatus, SourceType } from '@/lib/types';
+import { Source, Trend, Draft, UserPreferences, DraftStatus, SourceType, DraftFeedback } from '@/lib/types';
 import { sourcesStorage } from '@/lib/storage';
 import { generateMockTrends } from '@/lib/mockData';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,7 @@ interface AppContextType {
   generateDraft: () => Promise<void>;
   updateDraft: (id: string, updates: Partial<Draft>) => void;
   sendDraft: (id: string) => Promise<void>;
+  submitFeedback: (feedback: DraftFeedback) => Promise<void>;
   updatePreferences: (preferences: Partial<UserPreferences>) => void;
   refreshTrends: () => void;
 }
@@ -383,6 +384,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const submitFeedback = async (feedback: DraftFeedback) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('draft_feedback')
+        .insert({
+          user_id: user.id,
+          draft_id: feedback.draft_id,
+          original_subject: feedback.original_subject,
+          edited_subject: feedback.edited_subject,
+          original_content: feedback.original_content,
+          edited_content: feedback.edited_content,
+          rating: feedback.rating,
+          comments: feedback.comments,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Feedback submitted",
+        description: "Thank you! Your feedback helps improve future drafts.",
+      });
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast({
+        title: "Submission failed",
+        description: "Failed to save feedback. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const refreshTrends = async () => {
     if (!user) return;
 
@@ -416,6 +450,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         generateDraft,
         updateDraft,
         sendDraft,
+        submitFeedback,
         updatePreferences,
         refreshTrends,
       }}

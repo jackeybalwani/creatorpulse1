@@ -3,22 +3,30 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar, MessageSquare, FileText } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { FeedbackDialog } from "@/components/FeedbackDialog";
+import { DiffViewer } from "@/components/DiffViewer";
 
 const DraftEditor = () => {
-  const { drafts, trends, updateDraft, sendDraft } = useApp();
+  const { drafts, trends, updateDraft, sendDraft, submitFeedback } = useApp();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
   
   const latestDraft = drafts[drafts.length - 1];
   const [subject, setSubject] = useState(latestDraft?.subject || '');
   const [content, setContent] = useState(latestDraft?.content || '');
+  
+  // Store original content for diff comparison
+  const [originalSubject] = useState(latestDraft?.subject || '');
+  const [originalContent] = useState(latestDraft?.content || '');
 
   useEffect(() => {
     if (latestDraft) {
@@ -52,16 +60,28 @@ const DraftEditor = () => {
   };
 
   const handleApprove = () => {
+    setShowFeedbackDialog(true);
+  };
+
+  const handleFeedbackSubmit = async (feedbackData: { rating: number; comments: string }) => {
+    // Submit feedback to database
+    await submitFeedback({
+      draft_id: latestDraft.id,
+      original_subject: originalSubject,
+      edited_subject: subject,
+      original_content: originalContent,
+      edited_content: content,
+      rating: feedbackData.rating,
+      comments: feedbackData.comments,
+    });
+
+    // Update draft status to reviewed
     updateDraft(latestDraft.id, { 
       status: 'reviewed',
       subject, 
       content,
-      feedback: {
-        rating: feedback === 'up' ? 5 : 3,
-        comments: feedback === 'up' ? 'Good draft' : 'Needs improvement',
-        improvements: [],
-      }
     });
+    
     toast({
       title: "Draft Approved!",
       description: "Your newsletter has been scheduled for delivery.",
@@ -104,6 +124,15 @@ const DraftEditor = () => {
           </div>
           <div className="flex gap-2">
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDiff(!showDiff)}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {showDiff ? 'Hide' : 'View'} Changes
+            </Button>
+            <Button
               variant={feedback === "up" ? "default" : "outline"}
               size="sm"
               onClick={() => setFeedback("up")}
@@ -124,6 +153,16 @@ const DraftEditor = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Diff Viewer */}
+      {showDiff && (
+        <DiffViewer
+          originalSubject={originalSubject}
+          editedSubject={subject}
+          originalContent={originalContent}
+          editedContent={content}
+        />
+      )}
 
       {/* Newsletter Content */}
       <Card>
@@ -195,7 +234,8 @@ const DraftEditor = () => {
             Save Draft
           </Button>
           <Button variant="outline" size="lg" className="gap-2" onClick={handleApprove}>
-            Approve & Schedule
+            <MessageSquare className="h-4 w-4" />
+            Approve & Provide Feedback
           </Button>
           <Button size="lg" className="gap-2" onClick={handleSend} disabled={isSending}>
             <Send className="h-4 w-4" />
@@ -203,6 +243,14 @@ const DraftEditor = () => {
           </Button>
         </div>
       </div>
+
+      {/* Feedback Dialog */}
+      <FeedbackDialog
+        open={showFeedbackDialog}
+        onOpenChange={setShowFeedbackDialog}
+        onSubmit={handleFeedbackSubmit}
+        initialRating={feedback}
+      />
     </div>
   );
 };
