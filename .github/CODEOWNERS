@@ -1,0 +1,13 @@
+# CODEOWNERS file for CreatorPulse repo
+# This ensures only you can approve and merge changes to protected branches (main/develop)
+
+# Apply to all files in the repository
+*    @jackeybalwani
+# Optional: Give Lovable or bots limited ownership for specific directories if needed
+# Example:
+# /ai-generated/   @lovable-ai-bot
+# /docs/           @your-github-username
+
+# If you have collaborators later, add them like this:
+# /frontend/       @teammate1
+# /backend/        @teammate2
