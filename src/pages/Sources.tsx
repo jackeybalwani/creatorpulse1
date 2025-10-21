@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Twitter, Youtube, Rss, Plus, Trash2, CheckCircle2, RefreshCw, Loader2, AlertCircle } from "lucide-react";
+import { Twitter, Youtube, Rss, Plus, Trash2, CheckCircle2, RefreshCw, Loader2, AlertCircle, Bell } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 const Sources = () => {
   const { sources, addSource, updateSource, deleteSource } = useApp();
   const { toast } = useToast();
-  const [sourceType, setSourceType] = useState<SourceType>('twitter');
+  const [sourceType, setSourceType] = useState<SourceType>('google-alerts');
   const [sourceUrl, setSourceUrl] = useState('');
   const [syncing, setSyncing] = useState(false);
 
@@ -72,6 +72,7 @@ const Sources = () => {
   const twitterSources = sources.filter(s => s.type === 'twitter');
   const youtubeSources = sources.filter(s => s.type === 'youtube');
   const rssSources = sources.filter(s => s.type === 'rss');
+  const googleAlertsSources = sources.filter(s => s.type === 'google-alerts');
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -110,17 +111,24 @@ const Sources = () => {
                 onChange={(e) => setSourceType(e.target.value as SourceType)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
+                <option value="google-alerts">Google Alerts</option>
                 <option value="twitter">Twitter/X Handle</option>
                 <option value="youtube">YouTube Channel</option>
                 <option value="rss">RSS Feed</option>
               </select>
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="source-url">URL or Handle</Label>
+              <Label htmlFor="source-url">
+                {sourceType === 'google-alerts' ? 'Google Alerts RSS Feed URL' : 'URL or Handle'}
+              </Label>
               <div className="flex gap-2">
                 <Input 
                   id="source-url" 
-                  placeholder="@username or https://..." 
+                  placeholder={
+                    sourceType === 'google-alerts' 
+                      ? 'https://www.google.com/alerts/feeds/...' 
+                      : '@username or https://...'
+                  }
                   className="flex-1"
                   value={sourceUrl}
                   onChange={(e) => setSourceUrl(e.target.value)}
@@ -130,10 +138,74 @@ const Sources = () => {
                   Add
                 </Button>
               </div>
+              {sourceType === 'google-alerts' && (
+                <p className="text-xs text-muted-foreground">
+                  Get RSS feed from <a href="https://www.google.com/alerts" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Google Alerts</a> → Manage Alerts → Click RSS icon
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Google Alerts */}
+      {googleAlertsSources.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5 text-green-500" />
+                  Google Alerts
+                </CardTitle>
+                <CardDescription>Monitoring {googleAlertsSources.length} alert{googleAlertsSources.length > 1 ? 's' : ''}</CardDescription>
+              </div>
+              <Badge variant="outline">Free</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {googleAlertsSources.map((source) => (
+                <div key={source.id} className="flex items-center justify-between p-4 rounded-lg border bg-card">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
+                      <Bell className="h-5 w-5 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{source.name}</p>
+                      <p className="text-sm text-muted-foreground">{source.trackedCount} articles tracked</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {source.syncStatus && (
+                      <Badge variant={source.syncStatus === 'success' ? 'outline' : source.syncStatus === 'error' ? 'destructive' : 'secondary'}>
+                        {source.syncStatus}
+                      </Badge>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Switch 
+                        checked={source.isActive}
+                        onCheckedChange={(checked) => updateSource(source.id, { isActive: checked })}
+                      />
+                      <span className="text-sm text-muted-foreground">Active</span>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => {
+                        deleteSource(source.id);
+                        toast({ title: "Source removed" });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Twitter Sources */}
       {twitterSources.length > 0 && (

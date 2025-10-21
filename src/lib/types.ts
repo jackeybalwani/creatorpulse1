@@ -1,4 +1,4 @@
-export type SourceType = 'twitter' | 'youtube' | 'rss';
+export type SourceType = 'twitter' | 'youtube' | 'rss' | 'google-alerts';
 export type DraftStatus = 'draft' | 'reviewed' | 'sent';
 export type FeedbackType = 'positive' | 'negative' | 'neutral';
 export type SyncStatus = 'pending' | 'syncing' | 'success' | 'error';

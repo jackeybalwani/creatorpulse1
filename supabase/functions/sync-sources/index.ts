@@ -74,7 +74,7 @@ serve(async (req) => {
         // Fetch content based on source type
         let content: Array<{ title: string; description: string }> = [];
         
-        if (source.type === 'rss') {
+        if (source.type === 'rss' || source.type === 'google-alerts') {
           content = await fetchRSSFeed(source.url);
         } else if (source.type === 'youtube') {
           content = await fetchYouTubeChannel(source.url);
@@ -146,13 +146,29 @@ async function fetchRSSFeed(url: string) {
     const response = await fetch(url);
     const text = await response.text();
     
-    // Parse RSS feed (basic implementation)
-    const items = text.match(/<item>[\s\S]*?<\/item>/g) || [];
+    // Parse RSS feed - supports both standard RSS and Atom formats (Google Alerts uses Atom)
+    const items = text.match(/<item>[\s\S]*?<\/item>/g) || text.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+    
     return items.map(item => {
-      const title = item.match(/<title>(.*?)<\/title>/)?.[1] || '';
-      const description = item.match(/<description>(.*?)<\/description>/)?.[1] || '';
+      // Try standard RSS format first
+      let title = item.match(/<title>(.*?)<\/title>/)?.[1] || '';
+      let description = item.match(/<description>(.*?)<\/description>/)?.[1] || '';
+      
+      // If not found, try Atom format (used by Google Alerts)
+      if (!title) {
+        title = item.match(/<title[^>]*>(.*?)<\/title>/)?.[1] || '';
+      }
+      if (!description) {
+        description = item.match(/<summary[^>]*>(.*?)<\/summary>/)?.[1] || 
+                     item.match(/<content[^>]*>(.*?)<\/content>/)?.[1] || '';
+      }
+      
+      // Clean up HTML entities and tags
+      title = title.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/<[^>]+>/g, '').trim();
+      description = description.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/<[^>]+>/g, '').trim();
+      
       return { title, description };
-    });
+    }).filter(item => item.title || item.description);
   } catch (error) {
     console.error('RSS fetch error:', error);
     return [];
