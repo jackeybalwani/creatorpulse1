@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar, MessageSquare, FileText, Eye, Edit3, BarChart3, Mail, Clock, Hash } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar, MessageSquare, FileText, Eye, Edit3, BarChart3, Mail, Clock, Hash, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
@@ -67,6 +67,16 @@ const DraftEditor = () => {
 
   const handleApprove = () => {
     setShowFeedbackDialog(true);
+  };
+
+  const handleReject = () => {
+    updateDraft(latestDraft.id, { status: 'rejected' });
+    toast({
+      title: "Draft Rejected",
+      description: "This draft has been rejected. You can generate a new one.",
+      variant: "destructive",
+    });
+    navigate("/");
   };
 
   const handleFeedbackSubmit = async (feedbackData: { rating: number; comments: string }) => {
@@ -155,6 +165,15 @@ const DraftEditor = () => {
             >
               <ThumbsDown className="h-4 w-4" />
               Needs Work
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReject}
+              className="gap-2 text-destructive hover:text-destructive"
+            >
+              <X className="h-4 w-4" />
+              Reject
             </Button>
           </div>
         </CardContent>
@@ -269,13 +288,27 @@ const DraftEditor = () => {
                 </>
               ) : (
                 <>
-                  {/* Preview Mode */}
-                  <div className="space-y-4 p-6 bg-muted/30 rounded-lg border">
-                    <h2 className="text-2xl font-bold">{subject || "Newsletter Subject"}</h2>
-                    <Separator />
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{content || "Newsletter content will appear here..."}</pre>
+                  {/* Preview Mode - Enterprise Newsletter Format */}
+                  <div className="space-y-4 p-8 bg-background rounded-lg border shadow-sm">
+                    <div className="border-b pb-4">
+                      <h1 className="text-3xl font-bold tracking-tight">{subject || "Newsletter Subject"}</h1>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      </p>
                     </div>
+                    <div 
+                      className="prose prose-sm max-w-none dark:prose-invert
+                        prose-headings:font-bold prose-headings:tracking-tight
+                        prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3
+                        prose-p:text-base prose-p:leading-relaxed prose-p:mb-4
+                        prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                        prose-strong:text-foreground prose-strong:font-semibold
+                        prose-ul:my-4 prose-li:my-1
+                        prose-hr:my-6 prose-hr:border-border"
+                      dangerouslySetInnerHTML={{ 
+                        __html: content || "<p class='text-muted-foreground'>Newsletter content will appear here...</p>" 
+                      }}
+                    />
                   </div>
                 </>
               )}
@@ -374,6 +407,15 @@ const DraftEditor = () => {
         <div className="flex gap-3">
           <Button variant="outline" size="lg" onClick={handleSave}>
             Save Draft
+          </Button>
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="gap-2 text-destructive hover:text-destructive" 
+            onClick={handleReject}
+          >
+            <X className="h-4 w-4" />
+            Reject Draft
           </Button>
           <Button variant="outline" size="lg" className="gap-2" onClick={handleApprove}>
             <MessageSquare className="h-4 w-4" />

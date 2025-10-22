@@ -110,7 +110,7 @@ serve(async (req) => {
         ).join('\n\n')}`
       : '';
 
-    const systemPrompt = `You are a professional newsletter writer. Create engaging, informative newsletter content that captures reader attention. ${styleContext ? 'Use the provided examples to match the writing style.' : ''}`;
+    const systemPrompt = `You are a professional newsletter writer specializing in enterprise-grade, visually appealing content. Create well-structured, scannable newsletters with clear sections, compelling headlines, and engaging formatting. ${styleContext ? 'Use the provided examples to match the writing style.' : ''}`;
 
     const userPrompt = `Write a newsletter draft based on these trending topics:
 
@@ -121,16 +121,32 @@ Tone: ${preferences.tone}
 Length: ${preferences.length}
 Focus Topics: ${preferences.topics.join(', ')}${styleContext}
 
-Generate a newsletter with:
-1. A compelling subject line (max 60 characters)
-2. An engaging introduction
-3. Coverage of the top 3-4 trends with insights
-4. A conclusion with a call to action
+Create an enterprise-grade newsletter with proper HTML formatting including:
+
+1. **Subject Line**: Compelling, under 60 characters
+2. **Opening Hook**: 1-2 sentence attention grabber
+3. **Introduction**: Brief context paragraph (2-3 sentences)
+4. **Main Content**: 3-4 trend sections, each with:
+   - Bold headline (##)
+   - 2-3 paragraph summary
+   - Key insights as bullet points
+   - Relevant link or CTA
+5. **Commentary/Analysis**: Your expert take (1-2 paragraphs)
+6. **Closing**: Strong CTA and sign-off
+
+Use HTML formatting:
+- <h2> for section headlines
+- <p> for paragraphs with proper spacing
+- <strong> for emphasis
+- <ul><li> for bullet points
+- <a href="#"> for links (placeholder URLs)
+- <hr> for section breaks
+- Line breaks between sections for readability
 
 Format your response as JSON:
 {
   "subject": "Your subject line here",
-  "content": "Full newsletter content here with proper formatting"
+  "content": "Full newsletter content with HTML formatting"
 }`;
 
     console.log('Calling Lovable AI...');
