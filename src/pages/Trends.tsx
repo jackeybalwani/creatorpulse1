@@ -51,7 +51,7 @@ const Trends = () => {
 
     await generateDraft({ selectedTrends: selectedTrendIds });
     setSelectedTrendIds([]);
-    navigate('/dashboard');
+    navigate('/');
   };
 
   const topTrend = trends.length > 0 ? trends.reduce((max, t) => t.mentions > max.mentions ? t : max, trends[0]) : null;
