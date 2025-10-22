@@ -446,6 +446,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const refreshTrends = async () => {
     if (!user) return;
 
+    // Delete old trends before adding new ones
+    await supabase.from('trends').delete().eq('user_id', user.id);
+
     const newTrends = generateMockTrends();
     
     for (const trend of newTrends) {
@@ -460,7 +463,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
     }
     
-    setTrends(newTrends);
+    // Reload trends from database to ensure consistency
+    const { data: trendsData } = await supabase
+      .from('trends')
+      .select('*')
+      .order('detected_at', { ascending: false });
+    
+    if (trendsData) {
+      setTrends(trendsData.map(t => ({
+        ...t,
+        detectedAt: t.detected_at,
+        sourceIds: [],
+      })));
+    }
   };
 
   return (
