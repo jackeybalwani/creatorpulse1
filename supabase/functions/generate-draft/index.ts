@@ -194,18 +194,45 @@ Format your response as JSON:
     const generatedText = data.choices[0].message.content;
     console.log('Generated text:', generatedText);
 
+    // Function to clean and unescape content
+    const cleanContent = (text: string): string => {
+      return text
+        // Remove literal escape sequences
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, ' ')
+        .replace(/\\r/g, '')
+        .replace(/\\\\/g, '\\')
+        .replace(/\\"/g, '"')
+        // Remove any remaining backslash-escaped characters
+        .replace(/\\([^\\])/g, '$1')
+        // Clean up excessive whitespace
+        .replace(/\n\s*\n\s*\n/g, '\n\n')
+        .trim();
+    };
+
     // Try to parse as JSON, fallback to text parsing
     let result;
     try {
-      result = JSON.parse(generatedText);
+      // First try to extract JSON from markdown code blocks if present
+      let jsonText = generatedText;
+      const codeBlockMatch = generatedText.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+      if (codeBlockMatch) {
+        jsonText = codeBlockMatch[1];
+      }
+      
+      const parsed = JSON.parse(jsonText);
+      result = {
+        subject: cleanContent(parsed.subject || 'Weekly Newsletter Update'),
+        content: cleanContent(parsed.content || '')
+      };
     } catch {
       // Fallback: extract subject and content from text
       const subjectMatch = generatedText.match(/"subject":\s*"([^"]+)"/);
-      const contentMatch = generatedText.match(/"content":\s*"([^"]+)"/s);
+      const contentMatch = generatedText.match(/"content":\s*"([\s\S]+?)"\s*\}/);
       
       result = {
-        subject: subjectMatch?.[1] || 'Weekly Newsletter Update',
-        content: contentMatch?.[1] || generatedText
+        subject: cleanContent(subjectMatch?.[1] || 'Weekly Newsletter Update'),
+        content: cleanContent(contentMatch?.[1] || generatedText)
       };
     }
 
