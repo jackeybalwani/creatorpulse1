@@ -2,13 +2,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, Flame, Eye, Clock, RefreshCw } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TrendingUp, TrendingDown, Flame, Eye, Clock, RefreshCw, Sparkles } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Trends = () => {
-  const { trends, refreshTrends } = useApp();
+  const { trends, refreshTrends, generateDraft } = useApp();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [selectedTrendIds, setSelectedTrendIds] = useState<string[]>([]);
 
   const handleRefresh = () => {
     refreshTrends();
@@ -16,6 +21,37 @@ const Trends = () => {
       title: "Trends Refreshed!",
       description: "New trending topics have been detected.",
     });
+  };
+
+  const handleToggleTrend = (trendId: string) => {
+    setSelectedTrendIds(prev => 
+      prev.includes(trendId) 
+        ? prev.filter(id => id !== trendId)
+        : [...prev, trendId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTrendIds.length === trends.length) {
+      setSelectedTrendIds([]);
+    } else {
+      setSelectedTrendIds(trends.map(t => t.id));
+    }
+  };
+
+  const handleGenerateDraft = async () => {
+    if (selectedTrendIds.length === 0) {
+      toast({
+        title: "No trends selected",
+        description: "Please select at least one trend to generate a draft",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await generateDraft({ selectedTrends: selectedTrendIds });
+    setSelectedTrendIds([]);
+    navigate('/dashboard');
   };
 
   const topTrend = trends.length > 0 ? trends.reduce((max, t) => t.mentions > max.mentions ? t : max, trends[0]) : null;
@@ -27,12 +63,25 @@ const Trends = () => {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Trending Topics</h1>
-          <p className="text-muted-foreground mt-1">Emerging trends detected from your sources</p>
+          <p className="text-muted-foreground mt-1">
+            {selectedTrendIds.length > 0 
+              ? `${selectedTrendIds.length} trend${selectedTrendIds.length > 1 ? 's' : ''} selected`
+              : "Select trends to generate a personalized draft"
+            }
+          </p>
         </div>
-        <Button onClick={handleRefresh} variant="outline" className="gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          {selectedTrendIds.length > 0 && (
+            <Button onClick={handleGenerateDraft} className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              Generate Draft ({selectedTrendIds.length})
+            </Button>
+          )}
+          <Button onClick={handleRefresh} variant="outline" className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Top Trends */}
@@ -77,8 +126,17 @@ const Trends = () => {
       {/* Trending Topics List */}
       <Card>
         <CardHeader>
-          <CardTitle>All Trending Topics</CardTitle>
-          <CardDescription>Ranked by detection frequency and engagement</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>All Trending Topics</CardTitle>
+              <CardDescription>Ranked by detection frequency and engagement</CardDescription>
+            </div>
+            {trends.length > 0 && (
+              <Button onClick={handleSelectAll} variant="outline" size="sm">
+                {selectedTrendIds.length === trends.length ? 'Deselect All' : 'Select All'}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {trends.length === 0 ? (
@@ -92,9 +150,24 @@ const Trends = () => {
                 const sentimentPercent = Math.round(trend.sentiment * 100);
                 
                 return (
-                  <div key={trend.id} className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
+                  <div 
+                    key={trend.id} 
+                    className={`p-4 rounded-lg border transition-colors cursor-pointer ${
+                      selectedTrendIds.includes(trend.id) 
+                        ? 'bg-accent/20 border-primary' 
+                        : 'bg-card hover:bg-accent/5'
+                    }`}
+                    onClick={() => handleToggleTrend(trend.id)}
+                  >
                     <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
+                      <div className="flex items-start gap-3 flex-1">
+                        <Checkbox 
+                          checked={selectedTrendIds.includes(trend.id)}
+                          onCheckedChange={() => handleToggleTrend(trend.id)}
+                          className="mt-1"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold text-lg">{trend.title}</h3>
                           <Badge 
@@ -122,6 +195,7 @@ const Trends = () => {
                           <Badge variant="secondary" className="text-xs">
                             {trend.category}
                           </Badge>
+                        </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
