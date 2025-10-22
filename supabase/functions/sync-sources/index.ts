@@ -80,6 +80,12 @@ serve(async (req) => {
           content = await fetchYouTubeChannel(source.url);
         } else if (source.type === 'twitter') {
           content = await fetchTwitterHandle(source.url);
+        } else if (source.type === 'google-trends') {
+          content = await fetchGoogleTrends();
+        } else if (source.type === 'reddit') {
+          content = await fetchReddit(source.url);
+        } else if (source.type === 'hacker-news') {
+          content = await fetchHackerNews();
         }
 
         console.log(`Fetched ${content.length} items from ${source.name}`);
@@ -192,6 +198,40 @@ async function fetchTwitterHandle(handle: string) {
   // In production, you'd integrate with Twitter API v2
   console.log('Twitter sync - simulated for MVP');
   return [];
+}
+
+async function fetchGoogleTrends() {
+  try {
+    // Google Trends Daily RSS feed
+    const rssUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=US';
+    return await fetchRSSFeed(rssUrl);
+  } catch (error) {
+    console.error('Google Trends fetch error:', error);
+    return [];
+  }
+}
+
+async function fetchReddit(subredditUrl: string) {
+  try {
+    // Reddit RSS feeds: https://www.reddit.com/r/technology/.rss
+    // Ensure URL ends with .rss
+    const rssUrl = subredditUrl.endsWith('.rss') ? subredditUrl : `${subredditUrl}/.rss`;
+    return await fetchRSSFeed(rssUrl);
+  } catch (error) {
+    console.error('Reddit fetch error:', error);
+    return [];
+  }
+}
+
+async function fetchHackerNews() {
+  try {
+    // Hacker News front page RSS
+    const rssUrl = 'https://news.ycombinator.com/rss';
+    return await fetchRSSFeed(rssUrl);
+  } catch (error) {
+    console.error('Hacker News fetch error:', error);
+    return [];
+  }
 }
 
 async function analyzeTrends(content: any[], userId: string) {
