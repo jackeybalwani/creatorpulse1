@@ -1,11 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar, MessageSquare, FileText, Eye, Edit3, BarChart3, Mail, Clock, Hash, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
@@ -13,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { DiffViewer } from "@/components/DiffViewer";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 const DraftEditor = () => {
   const { drafts, trends, updateDraft, sendDraft, submitFeedback, preferences } = useApp();
@@ -278,10 +277,9 @@ const DraftEditor = () => {
                   {/* Main Content */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Content</label>
-                    <Textarea
-                      className="resize-none min-h-[600px] font-sans text-sm leading-relaxed"
+                    <RichTextEditor
                       value={content}
-                      onChange={(e) => setContent(e.target.value)}
+                      onChange={setContent}
                       placeholder="Write your newsletter content here..."
                     />
                   </div>

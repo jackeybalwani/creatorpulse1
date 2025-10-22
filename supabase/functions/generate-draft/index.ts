@@ -122,32 +122,33 @@ Tone: ${preferences.tone}
 Length: ${preferences.length}
 Focus Topics: ${preferences.topics.join(', ')}${styleContext}
 
-Create an enterprise-grade newsletter with proper HTML formatting including:
+Create an enterprise-grade newsletter with clean HTML fragment formatting:
 
 1. **Subject Line**: ${subjectLine ? `Use this subject: "${subjectLine}"` : 'Create a compelling subject under 60 characters'}
 2. **Opening Hook**: 1-2 sentence attention grabber
 3. **Introduction**: Brief context paragraph (2-3 sentences)
 4. **Main Content**: 3-4 trend sections, each with:
-   - Bold headline (##)
+   - Bold headline with <h2>
    - 2-3 paragraph summary
    - Key insights as bullet points
    - Relevant link or CTA
 5. **Commentary/Analysis**: Your expert take (1-2 paragraphs)
 6. **Closing**: Strong CTA and sign-off
 
-Use HTML formatting:
+CRITICAL: Output ONLY HTML fragments, NOT a complete HTML document. Do NOT include <!DOCTYPE>, <html>, <head>, <body>, or <style> tags.
+
+Use these HTML elements:
 - <h2> for section headlines
-- <p> for paragraphs with proper spacing
-- <strong> for emphasis
-- <ul><li> for bullet points
-- <a href="#"> for links (placeholder URLs)
-- <hr> for section breaks
-- Line breaks between sections for readability
+- <p> for paragraphs
+- <strong> or <b> for emphasis
+- <ul> and <li> for bullet lists
+- <a href="https://example.com"> for links
+- <hr> for section dividers
 
 Format your response as JSON:
 {
   "subject": "Your subject line here",
-  "content": "Full newsletter content with HTML formatting"
+  "content": "HTML fragment content starting with <p> tags, no doctype or html wrapper"
 }`;
 
     console.log('Calling Lovable AI...');

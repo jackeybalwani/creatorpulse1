@@ -120,3 +120,54 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Rich Text Editor Styles */
+.rich-text-editor .quill {
+  @apply rounded-md border border-input bg-background;
+}
+
+.rich-text-editor .ql-toolbar {
+  @apply border-b border-border bg-muted/50 rounded-t-md;
+}
+
+.rich-text-editor .ql-container {
+  @apply border-0 rounded-b-md;
+}
+
+.rich-text-editor .ql-editor {
+  @apply min-h-[600px] text-sm leading-relaxed;
+}
+
+.rich-text-editor .ql-editor.ql-blank::before {
+  @apply text-muted-foreground italic;
+}
+
+.rich-text-editor .ql-snow .ql-stroke {
+  @apply stroke-foreground;
+}
+
+.rich-text-editor .ql-snow .ql-fill {
+  @apply fill-foreground;
+}
+
+.rich-text-editor .ql-snow .ql-picker-label {
+  @apply text-foreground;
+}
+
+.rich-text-editor .ql-toolbar button:hover,
+.rich-text-editor .ql-toolbar button:focus,
+.rich-text-editor .ql-toolbar button.ql-active {
+  @apply text-primary;
+}
+
+.rich-text-editor .ql-toolbar button:hover .ql-stroke,
+.rich-text-editor .ql-toolbar button:focus .ql-stroke,
+.rich-text-editor .ql-toolbar button.ql-active .ql-stroke {
+  @apply stroke-primary;
+}
+
+.rich-text-editor .ql-toolbar button:hover .ql-fill,
+.rich-text-editor .ql-toolbar button:focus .ql-fill,
+.rich-text-editor .ql-toolbar button.ql-active .ql-fill {
+  @apply fill-primary;
+}
