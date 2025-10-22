@@ -99,10 +99,14 @@ serve(async (req) => {
       );
     }
 
-    // Prepare trends summary
+    // Prepare trends summary with full details
     const trendsSummary = trends.slice(0, 5).map((t: any, i: number) => 
-      `${i + 1}. ${t.title}: ${t.description} (${t.mentions} mentions, sentiment: ${t.sentiment})`
-    ).join('\n');
+      `${i + 1}. **${t.title}**
+   Description: ${t.description}
+   Mentions: ${t.mentions || 'N/A'}
+   Sentiment: ${typeof t.sentiment === 'number' ? (t.sentiment > 0 ? 'Positive' : t.sentiment < 0 ? 'Negative' : 'Neutral') : 'N/A'}
+   Category: ${t.category || 'General'}`
+    ).join('\n\n');
 
     // Build style training context from past newsletters
     const styleContext = pastNewsletters.length > 0 
@@ -111,29 +115,43 @@ serve(async (req) => {
         ).join('\n\n')}`
       : '';
 
-    const systemPrompt = `You are a professional newsletter writer specializing in enterprise-grade, visually appealing content. Create well-structured, scannable newsletters with clear sections, compelling headlines, and engaging formatting. ${styleContext ? 'Use the provided examples to match the writing style.' : ''}`;
+    // Add timestamp and unique context for variation
+    const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const uniqueContext = `Generation Date: ${currentDate}\nNewsletter ID: ${Date.now()}\nNumber of trends: ${trends.length}`;
 
-    const userPrompt = `Write a newsletter draft based on these trending topics:
+    const systemPrompt = `You are a professional newsletter writer specializing in enterprise-grade, visually appealing content. Create well-structured, scannable newsletters with clear sections, compelling headlines, and engaging formatting. 
+
+CRITICAL: You MUST create UNIQUE, ORIGINAL content for each newsletter request. Never reuse the same examples, phrases, or structure from previous newsletters. Each newsletter should feel fresh and distinctive based on the specific trends provided.
+
+${styleContext ? 'Use the provided examples to match the writing style, but generate completely NEW content.' : ''}`;
+
+    const userPrompt = `${uniqueContext}
+
+Write a UNIQUE newsletter draft based on these specific trending topics:
 
 ${trendsSummary}
 
-Writing Style: ${preferences.writingStyle}
-Tone: ${preferences.tone}
-Length: ${preferences.length}
-Focus Topics: ${preferences.topics.join(', ')}${styleContext}
+**USER PREFERENCES:**
+- Writing Style: ${preferences.writingStyle}
+- Tone: ${preferences.tone}
+- Length: ${preferences.length}
+- Focus Topics: ${preferences.topics.join(', ')}
+${styleContext}
 
-Create an enterprise-grade newsletter with clean HTML fragment formatting:
+**IMPORTANT INSTRUCTIONS:**
+Create a COMPLETELY NEW and UNIQUE enterprise-grade newsletter. DO NOT reuse content, examples, or phrasing from previous newsletters. Focus specifically on the trends listed above and create fresh, original analysis.
 
-1. **Subject Line**: ${subjectLine ? `Use this subject: "${subjectLine}"` : 'Create a compelling subject under 60 characters'}
-2. **Opening Hook**: 1-2 sentence attention grabber
-3. **Introduction**: Brief context paragraph (2-3 sentences)
-4. **Main Content**: 3-4 trend sections, each with:
-   - Bold headline with <h2>
-   - 2-3 paragraph summary
-   - Key insights as bullet points
-   - Relevant link or CTA
-5. **Commentary/Analysis**: Your expert take (1-2 paragraphs)
-6. **Closing**: Strong CTA and sign-off
+**Newsletter Structure:**
+1. **Subject Line**: ${subjectLine ? `Use this subject: "${subjectLine}"` : 'Create a compelling, UNIQUE subject line under 60 characters that reflects the specific trends'}
+2. **Opening Hook**: 1-2 sentence attention grabber (make it specific to today's trends)
+3. **Introduction**: Brief context paragraph explaining why these specific trends matter NOW
+4. **Main Content**: Cover ${trends.length === 1 ? 'the trend in-depth' : `ALL ${trends.length} trends`}, each with:
+   - Bold headline with <h2> (specific to the trend)
+   - 2-3 paragraph analysis with UNIQUE insights
+   - Key takeaways as bullet points
+   - Relevant context or implications
+5. **Commentary/Analysis**: Your ORIGINAL expert perspective on how these trends connect or impact the industry
+6. **Closing**: Strong CTA and professional sign-off
 
 CRITICAL FORMATTING RULES:
 - Output ONLY clean HTML fragments (NO <!DOCTYPE>, <html>, <head>, <body>, or <style> tags)
