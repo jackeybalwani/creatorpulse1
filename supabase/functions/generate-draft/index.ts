@@ -21,15 +21,16 @@ const trendSchema = z.object({
 });
 
 const preferencesSchema = z.object({
-  writingStyle: z.string().min(1).max(200),
-  tone: z.string().min(1).max(100),
-  length: z.enum(['short', 'medium', 'long']),
-  topics: z.array(z.string().max(100)).max(20),
+  writingStyle: z.string().min(1).max(500).default("Clear, engaging, and informative"),
+  tone: z.string().min(1).max(100).default("professional"),
+  length: z.enum(['short', 'medium', 'long']).default('medium'),
+  topics: z.array(z.string().max(100)).max(20).default(["AI", "Technology"]),
 });
 
 const generateDraftSchema = z.object({
   trends: z.array(trendSchema).min(1).max(20),
   preferences: preferencesSchema,
+  subjectLine: z.string().max(200).optional(),
   pastNewsletters: z.array(z.object({
     content: z.string().max(10000)
   })).max(10).optional(),
@@ -87,7 +88,7 @@ serve(async (req) => {
       );
     }
 
-    const { trends, preferences, pastNewsletters = [] } = validatedData;
+    const { trends, preferences, subjectLine, pastNewsletters = [] } = validatedData;
     console.log('Validated - Trends:', trends.length, 'items, Past newsletters:', pastNewsletters.length);
 
     if (!lovableApiKey) {
@@ -110,7 +111,7 @@ serve(async (req) => {
         ).join('\n\n')}`
       : '';
 
-    const systemPrompt = `You are a professional newsletter writer. Create engaging, informative newsletter content that captures reader attention. ${styleContext ? 'Use the provided examples to match the writing style.' : ''}`;
+    const systemPrompt = `You are a professional newsletter writer specializing in enterprise-grade, visually appealing content. Create well-structured, scannable newsletters with clear sections, compelling headlines, and engaging formatting. ${styleContext ? 'Use the provided examples to match the writing style.' : ''}`;
 
     const userPrompt = `Write a newsletter draft based on these trending topics:
 
@@ -121,16 +122,37 @@ Tone: ${preferences.tone}
 Length: ${preferences.length}
 Focus Topics: ${preferences.topics.join(', ')}${styleContext}
 
-Generate a newsletter with:
-1. A compelling subject line (max 60 characters)
-2. An engaging introduction
-3. Coverage of the top 3-4 trends with insights
-4. A conclusion with a call to action
+Create an enterprise-grade newsletter with clean HTML fragment formatting:
 
-Format your response as JSON:
+1. **Subject Line**: ${subjectLine ? `Use this subject: "${subjectLine}"` : 'Create a compelling subject under 60 characters'}
+2. **Opening Hook**: 1-2 sentence attention grabber
+3. **Introduction**: Brief context paragraph (2-3 sentences)
+4. **Main Content**: 3-4 trend sections, each with:
+   - Bold headline with <h2>
+   - 2-3 paragraph summary
+   - Key insights as bullet points
+   - Relevant link or CTA
+5. **Commentary/Analysis**: Your expert take (1-2 paragraphs)
+6. **Closing**: Strong CTA and sign-off
+
+CRITICAL FORMATTING RULES:
+- Output ONLY clean HTML fragments (NO <!DOCTYPE>, <html>, <head>, <body>, or <style> tags)
+- Do NOT include ANY escape sequences like \n, \t, \r, or \\
+- Write HTML as continuous text without literal newlines or tabs
+- Use proper HTML tags for structure, not escape characters
+
+Use these HTML elements:
+- <h2> for section headlines
+- <p> for paragraphs  
+- <strong> or <b> for emphasis
+- <ul> and <li> for bullet lists
+- <a href="https://example.com"> for links
+- <hr> for section dividers
+
+Format your response as clean JSON with NO escape sequences:
 {
   "subject": "Your subject line here",
-  "content": "Full newsletter content here with proper formatting"
+  "content": "<p>HTML content with proper tags but NO \\n or \\t characters</p><h2>Next Section</h2><p>More content...</p>"
 }`;
 
     console.log('Calling Lovable AI...');
@@ -174,24 +196,62 @@ Format your response as JSON:
     }
     
     const generatedText = data.choices[0].message.content;
-    console.log('Generated text:', generatedText);
+    console.log('Generated text (first 200 chars):', generatedText.substring(0, 200));
+
+    // Aggressive content cleaning function
+    const cleanContent = (text: string): string => {
+      let cleaned = text;
+      
+      // First pass: Remove all backslash escape sequences
+      cleaned = cleaned
+        .replace(/\\n/g, '') // Remove literal \n
+        .replace(/\\t/g, '') // Remove literal \t  
+        .replace(/\\r/g, '') // Remove literal \r
+        .replace(/\\\\/g, '\\') // Convert \\ to \
+        .replace(/\\"/g, '"') // Convert \" to "
+        .replace(/\\'/g, "'"); // Convert \' to '
+      
+      // Second pass: Remove any remaining backslash-escaped characters
+      cleaned = cleaned.replace(/\\(.)/g, '$1');
+      
+      // Third pass: Clean up whitespace but preserve HTML structure
+      cleaned = cleaned
+        .replace(/>\s+</g, '><') // Remove whitespace between tags
+        .replace(/\s{2,}/g, ' ') // Collapse multiple spaces
+        .trim();
+      
+      return cleaned;
+    };
 
     // Try to parse as JSON, fallback to text parsing
     let result;
     try {
-      result = JSON.parse(generatedText);
-    } catch {
+      // First try to extract JSON from markdown code blocks if present
+      let jsonText = generatedText;
+      const codeBlockMatch = generatedText.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+      if (codeBlockMatch) {
+        jsonText = codeBlockMatch[1];
+      }
+      
+      const parsed = JSON.parse(jsonText);
+      result = {
+        subject: cleanContent(parsed.subject || 'Weekly Newsletter Update'),
+        content: cleanContent(parsed.content || '')
+      };
+    } catch (parseError) {
+      console.error('JSON parse failed, using fallback:', parseError);
       // Fallback: extract subject and content from text
       const subjectMatch = generatedText.match(/"subject":\s*"([^"]+)"/);
-      const contentMatch = generatedText.match(/"content":\s*"([^"]+)"/s);
+      const contentMatch = generatedText.match(/"content":\s*"([\s\S]+?)"\s*\}/);
       
       result = {
-        subject: subjectMatch?.[1] || 'Weekly Newsletter Update',
-        content: contentMatch?.[1] || generatedText
+        subject: cleanContent(subjectMatch?.[1] || 'Weekly Newsletter Update'),
+        content: cleanContent(contentMatch?.[1] || generatedText)
       };
     }
 
-    console.log('Returning draft:', result);
+    console.log('Cleaned subject:', result.subject);
+    console.log('Cleaned content (first 200 chars):', result.content.substring(0, 200));
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

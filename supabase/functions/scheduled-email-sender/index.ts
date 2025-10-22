@@ -25,10 +25,7 @@ serve(async (req) => {
     // Get all drafts that are reviewed and scheduled for now or earlier
     const { data: drafts, error: draftsError } = await supabaseClient
       .from('drafts')
-      .select(`
-        *,
-        user_preferences!inner(email_address)
-      `)
+      .select('*')
       .eq('status', 'reviewed')
       .lte('scheduled_for', now.toISOString());
 
@@ -39,7 +36,19 @@ serve(async (req) => {
     const results = [];
 
     for (const draft of drafts || []) {
-      const emailAddress = (draft.user_preferences as any)?.email_address;
+      // Get user preferences for email address
+      const { data: userPref, error: prefError } = await supabaseClient
+        .from('user_preferences')
+        .select('email_address')
+        .eq('user_id', draft.user_id)
+        .single();
+
+      if (prefError || !userPref) {
+        console.log(`No preferences found for draft ${draft.id}`);
+        continue;
+      }
+
+      const emailAddress = userPref.email_address;
       
       if (!emailAddress) {
         console.log(`No email address for draft ${draft.id}`);

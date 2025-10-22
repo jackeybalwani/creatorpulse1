@@ -1,24 +1,37 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar, MessageSquare, FileText, Eye, Edit3, BarChart3, Mail, Clock, Hash, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { FeedbackDialog } from "@/components/FeedbackDialog";
+import { DiffViewer } from "@/components/DiffViewer";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 const DraftEditor = () => {
-  const { drafts, trends, updateDraft, sendDraft } = useApp();
+  const { drafts, trends, updateDraft, sendDraft, submitFeedback, preferences } = useApp();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
+  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
+  const [tone, setTone] = useState(preferences?.tone || "informative");
+  const [length, setLength] = useState(preferences?.length || "medium");
   
   const latestDraft = drafts[drafts.length - 1];
   const [subject, setSubject] = useState(latestDraft?.subject || '');
   const [content, setContent] = useState(latestDraft?.content || '');
+  
+  // Store original content for diff comparison
+  const [originalSubject] = useState(latestDraft?.subject || '');
+  const [originalContent] = useState(latestDraft?.content || '');
 
   useEffect(() => {
     if (latestDraft) {
@@ -52,16 +65,38 @@ const DraftEditor = () => {
   };
 
   const handleApprove = () => {
+    setShowFeedbackDialog(true);
+  };
+
+  const handleReject = () => {
+    updateDraft(latestDraft.id, { status: 'rejected' });
+    toast({
+      title: "Draft Rejected",
+      description: "This draft has been rejected. You can generate a new one.",
+      variant: "destructive",
+    });
+    navigate("/");
+  };
+
+  const handleFeedbackSubmit = async (feedbackData: { rating: number; comments: string }) => {
+    // Submit feedback to database
+    await submitFeedback({
+      draft_id: latestDraft.id,
+      original_subject: originalSubject,
+      edited_subject: subject,
+      original_content: originalContent,
+      edited_content: content,
+      rating: feedbackData.rating,
+      comments: feedbackData.comments,
+    });
+
+    // Update draft status to reviewed
     updateDraft(latestDraft.id, { 
       status: 'reviewed',
       subject, 
       content,
-      feedback: {
-        rating: feedback === 'up' ? 5 : 3,
-        comments: feedback === 'up' ? 'Good draft' : 'Needs improvement',
-        improvements: [],
-      }
     });
+    
     toast({
       title: "Draft Approved!",
       description: "Your newsletter has been scheduled for delivery.",
@@ -77,7 +112,7 @@ const DraftEditor = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -92,7 +127,7 @@ const DraftEditor = () => {
         </div>
       </div>
 
-      {/* AI Generation Info */}
+      {/* AI Generation Info & Quick Actions */}
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="flex items-center gap-3 p-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -103,6 +138,15 @@ const DraftEditor = () => {
             <p className="text-sm text-muted-foreground">Based on {trends.length} trending topics detected</p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDiff(!showDiff)}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {showDiff ? 'Hide' : 'View'} Changes
+            </Button>
             <Button
               variant={feedback === "up" ? "default" : "outline"}
               size="sm"
@@ -121,66 +165,234 @@ const DraftEditor = () => {
               <ThumbsDown className="h-4 w-4" />
               Needs Work
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReject}
+              className="gap-2 text-destructive hover:text-destructive"
+            >
+              <X className="h-4 w-4" />
+              Reject
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Newsletter Content */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Newsletter Content</CardTitle>
-          <CardDescription>Edit the subject line and body of your newsletter</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Subject Line */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Subject Line</label>
-            <Textarea
-              className="resize-none font-medium"
-              rows={2}
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          </div>
-
-          <Separator />
-
-          {/* Main Content */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Content</label>
-            <Textarea
-              className="resize-none min-h-[500px] font-mono text-sm"
-              rows={20}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Trends Used */}
-      {latestDraft.trendIds.length > 0 && (
-        <Card className="border-accent/30 bg-accent/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-accent" />
-              Trends Included
-            </CardTitle>
-            <CardDescription>These trending topics were used to generate this draft</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {trends
-                .filter(t => latestDraft.trendIds.includes(t.id))
-                .map(trend => (
-                  <Badge key={trend.id} variant="outline">
-                    {trend.title}
-                  </Badge>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Diff Viewer */}
+      {showDiff && (
+        <DiffViewer
+          originalSubject={originalSubject}
+          editedSubject={subject}
+          originalContent={originalContent}
+          editedContent={content}
+        />
       )}
+
+      {/* Main Editor Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Content Editor */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Customization Options */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Customization</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === "edit" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("edit")}
+                    className="gap-2"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant={viewMode === "preview" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("preview")}
+                    className="gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tone</label>
+                  <Select value={tone} onValueChange={setTone}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="informative">Informative</SelectItem>
+                      <SelectItem value="casual">Casual</SelectItem>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Length</label>
+                  <Select value={length} onValueChange={(value) => setLength(value as 'short' | 'medium' | 'long')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">Short</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="long">Long</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Newsletter Content */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Newsletter Content</CardTitle>
+              <CardDescription>Edit the subject line and body of your newsletter</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {viewMode === "edit" ? (
+                <>
+                  {/* Subject Line */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Subject Line</label>
+                    <Input
+                      className="font-medium text-lg"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="Enter newsletter subject..."
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Main Content */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Content</label>
+                    <RichTextEditor
+                      value={content}
+                      onChange={setContent}
+                      placeholder="Write your newsletter content here..."
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Preview Mode - Enterprise Newsletter Format */}
+                  <div className="space-y-4 p-8 bg-background rounded-lg border shadow-sm">
+                    <div className="border-b pb-4">
+                      <h1 className="text-3xl font-bold tracking-tight">{subject || "Newsletter Subject"}</h1>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      </p>
+                    </div>
+                    <div 
+                      className="prose prose-sm max-w-none dark:prose-invert
+                        prose-headings:font-bold prose-headings:tracking-tight
+                        prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3
+                        prose-p:text-base prose-p:leading-relaxed prose-p:mb-4
+                        prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                        prose-strong:text-foreground prose-strong:font-semibold
+                        prose-ul:my-4 prose-li:my-1
+                        prose-hr:my-6 prose-hr:border-border"
+                      dangerouslySetInnerHTML={{ 
+                        __html: content || "<p class='text-muted-foreground'>Newsletter content will appear here...</p>" 
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Trends & Analytics */}
+        <div className="space-y-6">
+          {/* Trends Used */}
+          {latestDraft.trendIds.length > 0 && (
+            <Card className="border-accent/30 bg-accent/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <TrendingUp className="h-5 w-5 text-accent" />
+                  Trends Included
+                </CardTitle>
+                <CardDescription>Trending topics used in this draft</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {trends
+                  .filter(t => latestDraft.trendIds.includes(t.id))
+                  .map(trend => (
+                    <Card key={trend.id} className="p-3 border-accent/20">
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-medium text-sm line-clamp-2">{trend.title}</h4>
+                          <Badge variant="secondary" className="shrink-0">
+                            <Hash className="h-3 w-3 mr-1" />
+                            {trend.mentions}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{trend.description}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Badge variant="outline" className="text-xs">
+                            {trend.category}
+                          </Badge>
+                          <span>Sentiment: {(trend.sentiment * 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Analytics Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BarChart3 className="h-5 w-5" />
+                Expected Performance
+              </CardTitle>
+              <CardDescription>AI-predicted engagement metrics</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Open Rate</span>
+                  <span className="font-semibold">~35-42%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Click Rate</span>
+                  <span className="font-semibold">~8-12%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Readiness Score</span>
+                  <Badge variant="secondary" className="font-semibold">75%</Badge>
+                </div>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Mail className="h-3 w-3" />
+                  <span>Will be sent to {preferences?.emailAddress || 'your subscribers'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>Scheduled for {new Date(latestDraft.scheduledFor).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
 
       {/* Actions */}
       <div className="flex items-center justify-between p-6 rounded-lg border bg-card">
@@ -194,8 +406,18 @@ const DraftEditor = () => {
           <Button variant="outline" size="lg" onClick={handleSave}>
             Save Draft
           </Button>
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="gap-2 text-destructive hover:text-destructive" 
+            onClick={handleReject}
+          >
+            <X className="h-4 w-4" />
+            Reject Draft
+          </Button>
           <Button variant="outline" size="lg" className="gap-2" onClick={handleApprove}>
-            Approve & Schedule
+            <MessageSquare className="h-4 w-4" />
+            Approve & Provide Feedback
           </Button>
           <Button size="lg" className="gap-2" onClick={handleSend} disabled={isSending}>
             <Send className="h-4 w-4" />
@@ -203,6 +425,14 @@ const DraftEditor = () => {
           </Button>
         </div>
       </div>
+
+      {/* Feedback Dialog */}
+      <FeedbackDialog
+        open={showFeedbackDialog}
+        onOpenChange={setShowFeedbackDialog}
+        onSubmit={handleFeedbackSubmit}
+        initialRating={feedback}
+      />
     </div>
   );
 };

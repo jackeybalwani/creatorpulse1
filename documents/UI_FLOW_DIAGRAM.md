@@ -61,7 +61,9 @@ graph TD
     E --> E1[View Detected Trends]
     E --> E2[Filter by Category]
     E --> E3[Sort by Sentiment/Mentions]
-    E1 --> E4[Select Trends for Draft]
+    E1 --> E4[Select Trends via Checkbox]
+    E4 --> E5[Select All/Deselect All]
+    E5 --> E6[Generate Draft from Selected]
     
     F --> F1[View All Drafts]
     F --> F2[Create New Draft]
@@ -124,8 +126,9 @@ sequenceDiagram
     API->>DB: Fetch past newsletters (style)
     DB-->>API: Return data
     API->>AI: Generate draft with context
-    Note over AI: Uses GPT-5 or Gemini 2.5
+    Note over AI: Uses Lovable AI Gateway<br/>Models: Gemini 2.5 Flash (default)<br/>or GPT-5, Gemini Pro
     AI-->>API: Return generated content
+    API->>API: Clean formatting (remove escapes)
     API->>API: Apply user style preferences
     API->>DB: Save draft
     DB-->>API: Draft saved

@@ -2,28 +2,69 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Clock, TrendingUp, CheckCircle2, Sparkles, Calendar } from "lucide-react";
+import { FileText, Clock, TrendingUp, CheckCircle2, Sparkles, Calendar, Star, MessageSquare } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { DraftConfigDialog, DraftConfig } from "@/components/DraftConfigDialog";
 
 const Dashboard = () => {
   const { sources, trends, drafts, generateDraft } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [avgRating, setAvgRating] = useState<number>(0);
+  const [feedbackCount, setFeedbackCount] = useState<number>(0);
+  const [showDraftConfig, setShowDraftConfig] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   const latestDraft = drafts[drafts.length - 1];
   const activeSources = sources.filter(s => s.isActive).length;
   const approvedDrafts = drafts.filter(d => d.status === 'reviewed').length;
   const acceptanceRate = drafts.length > 0 ? Math.round((approvedDrafts / drafts.length) * 100) : 0;
 
-  const handleGenerateDraft = () => {
-    generateDraft();
-    toast({
-      title: "Draft Generated!",
-      description: "Your new newsletter draft is ready for review.",
-    });
-    navigate("/drafts");
+  // Load feedback analytics
+  useEffect(() => {
+    const loadFeedbackStats = async () => {
+      const { data: feedbackData } = await supabase
+        .from('draft_feedback')
+        .select('rating');
+      
+      if (feedbackData && feedbackData.length > 0) {
+        const ratings = feedbackData.map(f => f.rating).filter(r => r !== null);
+        const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+        setAvgRating(Number(avg.toFixed(1)));
+        setFeedbackCount(feedbackData.length);
+      }
+    };
+
+    loadFeedbackStats();
+  }, [drafts]);
+
+  const handleOpenDraftConfig = () => {
+    setShowDraftConfig(true);
+  };
+
+  const handleGenerateDraft = async (config: DraftConfig) => {
+    setIsGenerating(true);
+    try {
+      await generateDraft(config);
+      toast({
+        title: "Draft Generated!",
+        description: "Your new newsletter draft is ready for review.",
+      });
+      setShowDraftConfig(false);
+      navigate("/drafts");
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate draft. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -50,7 +91,7 @@ const Dashboard = () => {
               <FileText className="h-4 w-4" />
               {latestDraft ? 'Review Draft' : 'View Drafts'}
             </Button>
-            <Button size="lg" variant="outline" className="gap-2" onClick={handleGenerateDraft}>
+            <Button size="lg" variant="outline" className="gap-2" onClick={handleOpenDraftConfig}>
               <Sparkles className="h-4 w-4" />
               Generate New
             </Button>
@@ -86,12 +127,13 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Sources</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Avg Draft Rating</CardTitle>
+            <Star className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeSources}</div>
-            <p className="text-xs text-muted-foreground">Twitter, YouTube, RSS feeds</p>
+            <div className="text-2xl font-bold">{avgRating > 0 ? avgRating : '--'} / 5</div>
+            <p className="text-xs text-muted-foreground">{feedbackCount} feedback submissions</p>
+            {avgRating > 0 && <Progress value={(avgRating / 5) * 100} className="mt-2" />}
           </CardContent>
         </Card>
 
@@ -117,7 +159,7 @@ const Dashboard = () => {
           {drafts.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No drafts yet. Generate your first one!</p>
-              <Button onClick={handleGenerateDraft} className="gap-2">
+              <Button onClick={handleOpenDraftConfig} className="gap-2">
                 <Sparkles className="h-4 w-4" />
                 Generate Draft
               </Button>
@@ -181,6 +223,15 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Draft Configuration Dialog */}
+      <DraftConfigDialog
+        open={showDraftConfig}
+        onOpenChange={setShowDraftConfig}
+        trends={trends}
+        onGenerate={handleGenerateDraft}
+        isGenerating={isGenerating}
+      />
     </div>
   );
 };

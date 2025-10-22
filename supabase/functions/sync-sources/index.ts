@@ -74,12 +74,18 @@ serve(async (req) => {
         // Fetch content based on source type
         let content: Array<{ title: string; description: string }> = [];
         
-        if (source.type === 'rss') {
+        if (source.type === 'rss' || source.type === 'google-alerts') {
           content = await fetchRSSFeed(source.url);
         } else if (source.type === 'youtube') {
           content = await fetchYouTubeChannel(source.url);
         } else if (source.type === 'twitter') {
           content = await fetchTwitterHandle(source.url);
+        } else if (source.type === 'google-trends') {
+          content = await fetchGoogleTrends();
+        } else if (source.type === 'reddit') {
+          content = await fetchReddit(source.url);
+        } else if (source.type === 'hacker-news') {
+          content = await fetchHackerNews();
         }
 
         console.log(`Fetched ${content.length} items from ${source.name}`);
@@ -146,13 +152,29 @@ async function fetchRSSFeed(url: string) {
     const response = await fetch(url);
     const text = await response.text();
     
-    // Parse RSS feed (basic implementation)
-    const items = text.match(/<item>[\s\S]*?<\/item>/g) || [];
+    // Parse RSS feed - supports both standard RSS and Atom formats (Google Alerts uses Atom)
+    const items = text.match(/<item>[\s\S]*?<\/item>/g) || text.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+    
     return items.map(item => {
-      const title = item.match(/<title>(.*?)<\/title>/)?.[1] || '';
-      const description = item.match(/<description>(.*?)<\/description>/)?.[1] || '';
+      // Try standard RSS format first
+      let title = item.match(/<title>(.*?)<\/title>/)?.[1] || '';
+      let description = item.match(/<description>(.*?)<\/description>/)?.[1] || '';
+      
+      // If not found, try Atom format (used by Google Alerts)
+      if (!title) {
+        title = item.match(/<title[^>]*>(.*?)<\/title>/)?.[1] || '';
+      }
+      if (!description) {
+        description = item.match(/<summary[^>]*>(.*?)<\/summary>/)?.[1] || 
+                     item.match(/<content[^>]*>(.*?)<\/content>/)?.[1] || '';
+      }
+      
+      // Clean up HTML entities and tags
+      title = title.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/<[^>]+>/g, '').trim();
+      description = description.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/<[^>]+>/g, '').trim();
+      
       return { title, description };
-    });
+    }).filter(item => item.title || item.description);
   } catch (error) {
     console.error('RSS fetch error:', error);
     return [];
@@ -176,6 +198,40 @@ async function fetchTwitterHandle(handle: string) {
   // In production, you'd integrate with Twitter API v2
   console.log('Twitter sync - simulated for MVP');
   return [];
+}
+
+async function fetchGoogleTrends() {
+  try {
+    // Google Trends Daily RSS feed
+    const rssUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=US';
+    return await fetchRSSFeed(rssUrl);
+  } catch (error) {
+    console.error('Google Trends fetch error:', error);
+    return [];
+  }
+}
+
+async function fetchReddit(subredditUrl: string) {
+  try {
+    // Reddit RSS feeds: https://www.reddit.com/r/technology/.rss
+    // Ensure URL ends with .rss
+    const rssUrl = subredditUrl.endsWith('.rss') ? subredditUrl : `${subredditUrl}/.rss`;
+    return await fetchRSSFeed(rssUrl);
+  } catch (error) {
+    console.error('Reddit fetch error:', error);
+    return [];
+  }
+}
+
+async function fetchHackerNews() {
+  try {
+    // Hacker News front page RSS
+    const rssUrl = 'https://news.ycombinator.com/rss';
+    return await fetchRSSFeed(rssUrl);
+  } catch (error) {
+    console.error('Hacker News fetch error:', error);
+    return [];
+  }
 }
 
 async function analyzeTrends(content: any[], userId: string) {

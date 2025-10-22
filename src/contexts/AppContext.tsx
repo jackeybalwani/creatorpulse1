@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Source, Trend, Draft, UserPreferences, DraftStatus, SourceType } from '@/lib/types';
+import { Source, Trend, Draft, UserPreferences, DraftStatus, SourceType, DraftFeedback } from '@/lib/types';
 import { sourcesStorage } from '@/lib/storage';
 import { generateMockTrends } from '@/lib/mockData';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,9 +14,10 @@ interface AppContextType {
   addSource: (source: Omit<Source, 'id' | 'addedAt'>) => void;
   updateSource: (id: string, updates: Partial<Source>) => void;
   deleteSource: (id: string) => void;
-  generateDraft: () => Promise<void>;
+  generateDraft: (config?: any) => Promise<void>;
   updateDraft: (id: string, updates: Partial<Draft>) => void;
   sendDraft: (id: string) => Promise<void>;
+  submitFeedback: (feedback: DraftFeedback) => Promise<void>;
   updatePreferences: (preferences: Partial<UserPreferences>) => void;
   refreshTrends: () => void;
 }
@@ -215,7 +216,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const generateDraft = async () => {
+  const generateDraft = async (config?: any) => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -231,10 +232,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         description: "AI is analyzing trends and creating your newsletter",
       });
 
+      // Use config if provided, otherwise use defaults
+      const draftPreferences = config ? {
+        writingStyle: config.writingStyle || "Clear, engaging, and informative",
+        tone: config.tone || preferences?.tone || "professional",
+        length: config.length || preferences?.length || "medium",
+        topics: config.topics || preferences?.topics || ["AI", "Technology"]
+      } : {
+        writingStyle: preferences?.writingStyle || "Clear, engaging, and informative",
+        tone: preferences?.tone || "professional",
+        length: preferences?.length || "medium",
+        topics: preferences?.topics || ["AI", "Technology"]
+      };
+
+      // Filter trends based on config selection
+      const selectedTrends = config?.selectedTrends 
+        ? trends.filter(t => config.selectedTrends.includes(t.id))
+        : trends;
+
       const { data, error } = await supabase.functions.invoke('generate-draft', {
         body: { 
-          trends,
-          preferences 
+          trends: selectedTrends,
+          preferences: draftPreferences,
+          subjectLine: config?.subjectLine
         }
       });
 
@@ -244,6 +264,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const { subject, content } = data;
       
+      // Get trend IDs from selected trends
+      const trendIds = (config?.selectedTrends || selectedTrends.map(t => t.id)).slice(0, 5);
+      
       const { data: newDraft, error: insertError } = await supabase
         .from('drafts')
         .insert({
@@ -251,6 +274,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           subject,
           content,
           status: 'draft',
+          trend_ids: trendIds,
         })
         .select()
         .single();
@@ -264,7 +288,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         status: 'pending' as DraftStatus,
         generatedAt: newDraft.created_at,
         scheduledFor: newDraft.created_at,
-        trendIds: [],
+        trendIds: newDraft.trend_ids || [],
       }, ...drafts]);
       
       toast({
@@ -319,7 +343,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('send-newsletter', {
+      const { data, error } = await supabase.functions.invoke('send-newsletter', {
         body: {
           to: preferences.emailAddress,
           subject: draft.subject,
@@ -327,7 +351,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error sending newsletter:', error);
+        throw new Error(error.message || 'Failed to send newsletter');
+      }
 
       // Update draft status to sent
       await supabase
@@ -383,8 +410,44 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const submitFeedback = async (feedback: DraftFeedback) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('draft_feedback')
+        .insert({
+          user_id: user.id,
+          draft_id: feedback.draft_id,
+          original_subject: feedback.original_subject,
+          edited_subject: feedback.edited_subject,
+          original_content: feedback.original_content,
+          edited_content: feedback.edited_content,
+          rating: feedback.rating,
+          comments: feedback.comments,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Feedback submitted",
+        description: "Thank you! Your feedback helps improve future drafts.",
+      });
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast({
+        title: "Submission failed",
+        description: "Failed to save feedback. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const refreshTrends = async () => {
     if (!user) return;
+
+    // Delete old trends before adding new ones
+    await supabase.from('trends').delete().eq('user_id', user.id);
 
     const newTrends = generateMockTrends();
     
@@ -400,7 +463,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
     }
     
-    setTrends(newTrends);
+    // Reload trends from database to ensure consistency
+    const { data: trendsData } = await supabase
+      .from('trends')
+      .select('*')
+      .order('detected_at', { ascending: false });
+    
+    if (trendsData) {
+      setTrends(trendsData.map(t => ({
+        ...t,
+        detectedAt: t.detected_at,
+        sourceIds: [],
+      })));
+    }
   };
 
   return (
@@ -416,6 +491,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         generateDraft,
         updateDraft,
         sendDraft,
+        submitFeedback,
         updatePreferences,
         refreshTrends,
       }}

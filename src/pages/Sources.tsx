@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Twitter, Youtube, Rss, Plus, Trash2, CheckCircle2, RefreshCw, Loader2, AlertCircle } from "lucide-react";
+import { Twitter, Youtube, Rss, Plus, Trash2, CheckCircle2, RefreshCw, Loader2, AlertCircle, Bell, TrendingUp, MessageSquare, Hash } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
@@ -14,7 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 const Sources = () => {
   const { sources, addSource, updateSource, deleteSource } = useApp();
   const { toast } = useToast();
-  const [sourceType, setSourceType] = useState<SourceType>('twitter');
+  const [sourceType, setSourceType] = useState<SourceType>('google-trends');
+  const [sourceName, setSourceName] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [syncing, setSyncing] = useState(false);
 
@@ -42,6 +43,21 @@ const Sources = () => {
     }
   };
 
+  const handleQuickAddSource = (type: SourceType, name: string, url: string) => {
+    addSource({
+      type,
+      name,
+      url,
+      isActive: true,
+      trackedCount: 0,
+    });
+
+    toast({
+      title: "Source Added!",
+      description: `Successfully added ${name}`,
+    });
+  };
+
   const handleAddSource = () => {
     if (!sourceUrl.trim()) {
       toast({
@@ -52,7 +68,7 @@ const Sources = () => {
       return;
     }
 
-    const name = sourceUrl.startsWith('@') ? sourceUrl : sourceUrl.split('/').pop() || sourceUrl;
+    const name = sourceName || (sourceUrl.startsWith('@') ? sourceUrl : sourceUrl.split('/').pop() || sourceUrl);
     addSource({
       type: sourceType,
       name,
@@ -63,15 +79,71 @@ const Sources = () => {
 
     toast({
       title: "Source Added!",
-      description: `Successfully added ${name} to your sources`,
+      description: `Successfully added ${name}`,
     });
 
     setSourceUrl('');
+    setSourceName('');
   };
 
+  const googleTrendsSources = sources.filter(s => s.type === 'google-trends');
+  const redditSources = sources.filter(s => s.type === 'reddit');
+  const hackerNewsSources = sources.filter(s => s.type === 'hacker-news');
+  const googleAlertsSources = sources.filter(s => s.type === 'google-alerts');
   const twitterSources = sources.filter(s => s.type === 'twitter');
   const youtubeSources = sources.filter(s => s.type === 'youtube');
   const rssSources = sources.filter(s => s.type === 'rss');
+  
+  const renderSourceCard = (source: any) => {
+    const iconMap: Record<SourceType, any> = {
+      'google-trends': { icon: TrendingUp, color: 'purple' },
+      'reddit': { icon: MessageSquare, color: 'orange' },
+      'hacker-news': { icon: Hash, color: 'orange' },
+      'google-alerts': { icon: Bell, color: 'green' },
+      'twitter': { icon: Twitter, color: 'blue' },
+      'youtube': { icon: Youtube, color: 'red' },
+      'rss': { icon: Rss, color: 'orange' },
+    };
+    const { icon: Icon, color } = iconMap[source.type] || { icon: Rss, color: 'gray' };
+    
+    return (
+      <div key={source.id} className="flex items-center justify-between p-4 rounded-lg border bg-card">
+        <div className="flex items-center gap-4">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-${color}-500/10`}>
+            <Icon className={`h-5 w-5 text-${color}-500`} />
+          </div>
+          <div>
+            <p className="font-medium">{source.name}</p>
+            <p className="text-sm text-muted-foreground">{source.trackedCount} items tracked</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {source.syncStatus && (
+            <Badge variant={source.syncStatus === 'success' ? 'outline' : source.syncStatus === 'error' ? 'destructive' : 'secondary'}>
+              {source.syncStatus}
+            </Badge>
+          )}
+          <div className="flex items-center gap-2">
+            <Switch 
+              checked={source.isActive}
+              onCheckedChange={(checked) => updateSource(source.id, { isActive: checked })}
+            />
+            <span className="text-sm text-muted-foreground">Active</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => {
+              deleteSource(source.id);
+              toast({ title: "Source removed" });
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -83,7 +155,7 @@ const Sources = () => {
         </div>
         <Button
           onClick={handleSyncSources}
-          disabled={syncing || sources.length === 0}
+          disabled={syncing || sources.filter(s => s.isActive).length === 0}
           className="gap-2"
         >
           {syncing ? (
@@ -94,10 +166,74 @@ const Sources = () => {
         </Button>
       </div>
 
-      {/* Add New Source */}
+      {/* Quick Add Sources */}
       <Card>
         <CardHeader>
-          <CardTitle>Connect New Source</CardTitle>
+          <CardTitle>Quick Add Sources</CardTitle>
+          <CardDescription>Add popular sources with one click</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-2 p-4"
+              onClick={() => handleQuickAddSource(
+                'google-trends',
+                'Google Trends US',
+                'https://trends.google.com/trends/trendingsearches/daily/rss?geo=US'
+              )}
+            >
+              <TrendingUp className="h-5 w-5 text-purple-500" />
+              <span className="font-medium">Google Trends</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-2 p-4"
+              onClick={() => handleQuickAddSource(
+                'hacker-news',
+                'Hacker News Front Page',
+                'https://news.ycombinator.com/rss'
+              )}
+            >
+              <Hash className="h-5 w-5 text-orange-500" />
+              <span className="font-medium">Hacker News</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-2 p-4"
+              onClick={() => {
+                const name = prompt('Enter a name for this Reddit source (e.g., "r/technology"):');
+                const url = prompt('Enter subreddit URL (e.g., https://www.reddit.com/r/technology):');
+                if (name && url) {
+                  handleQuickAddSource('reddit', name, url);
+                }
+              }}
+            >
+              <MessageSquare className="h-5 w-5 text-orange-500" />
+              <span className="font-medium">Reddit</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-2 p-4"
+              onClick={() => {
+                const name = prompt('Enter a name for this Google Alert:');
+                const url = prompt('Enter Google Alerts RSS URL:');
+                if (name && url) {
+                  handleQuickAddSource('google-alerts', name, url);
+                }
+              }}
+            >
+              <Bell className="h-5 w-5 text-green-500" />
+              <span className="font-medium">Google Alerts</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add Custom Source */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Add Custom Source</CardTitle>
           <CardDescription>Add Twitter/X handles, YouTube channels, or RSS feeds</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -113,6 +249,8 @@ const Sources = () => {
                 <option value="twitter">Twitter/X Handle</option>
                 <option value="youtube">YouTube Channel</option>
                 <option value="rss">RSS Feed</option>
+                <option value="reddit">Reddit</option>
+                <option value="google-alerts">Google Alerts</option>
               </select>
             </div>
             <div className="space-y-2 md:col-span-2">
@@ -120,7 +258,13 @@ const Sources = () => {
               <div className="flex gap-2">
                 <Input 
                   id="source-url" 
-                  placeholder="@username or https://..." 
+                  placeholder={
+                    sourceType === 'reddit' ? "https://www.reddit.com/r/technology" :
+                    sourceType === 'google-alerts' ? "Google Alerts RSS Feed URL" :
+                    sourceType === 'rss' ? "https://example.com/feed.xml" :
+                    sourceType === 'youtube' ? "Channel ID" :
+                    "@twitter_handle"
+                  }
                   className="flex-1"
                   value={sourceUrl}
                   onChange={(e) => setSourceUrl(e.target.value)}
@@ -134,6 +278,98 @@ const Sources = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Google Trends Sources */}
+      {googleTrendsSources.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-purple-500" />
+                  Google Trends
+                </CardTitle>
+                <CardDescription>Monitoring {googleTrendsSources.length} trend source{googleTrendsSources.length > 1 ? 's' : ''}</CardDescription>
+              </div>
+              <Badge variant="outline">Free</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {googleTrendsSources.map((source) => renderSourceCard(source))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Reddit Sources */}
+      {redditSources.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-orange-500" />
+                  Reddit
+                </CardTitle>
+                <CardDescription>Following {redditSources.length} subreddit{redditSources.length > 1 ? 's' : ''}</CardDescription>
+              </div>
+              <Badge variant="outline">Free</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {redditSources.map((source) => renderSourceCard(source))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Hacker News Sources */}
+      {hackerNewsSources.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Hash className="h-5 w-5 text-orange-500" />
+                  Hacker News
+                </CardTitle>
+                <CardDescription>Following {hackerNewsSources.length} feed{hackerNewsSources.length > 1 ? 's' : ''}</CardDescription>
+              </div>
+              <Badge variant="outline">Free</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {hackerNewsSources.map((source) => renderSourceCard(source))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Google Alerts */}
+      {googleAlertsSources.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5 text-green-500" />
+                  Google Alerts
+                </CardTitle>
+                <CardDescription>Monitoring {googleAlertsSources.length} alert{googleAlertsSources.length > 1 ? 's' : ''}</CardDescription>
+              </div>
+              <Badge variant="outline">Free</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {googleAlertsSources.map((source) => renderSourceCard(source))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Twitter Sources */}
       {twitterSources.length > 0 && (
@@ -152,38 +388,7 @@ const Sources = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {twitterSources.map((source) => (
-                <div key={source.id} className="flex items-center justify-between p-4 rounded-lg border bg-card">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10">
-                      <Twitter className="h-5 w-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{source.name}</p>
-                      <p className="text-sm text-muted-foreground">{source.trackedCount} posts tracked</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Switch 
-                        checked={source.isActive}
-                        onCheckedChange={(checked) => updateSource(source.id, { isActive: checked })}
-                      />
-                      <span className="text-sm text-muted-foreground">Active</span>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => {
-                        deleteSource(source.id);
-                        toast({ title: "Source removed" });
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+              {twitterSources.map((source) => renderSourceCard(source))}
             </div>
           </CardContent>
         </Card>
@@ -206,38 +411,7 @@ const Sources = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {youtubeSources.map((source) => (
-                <div key={source.id} className="flex items-center justify-between p-4 rounded-lg border bg-card">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
-                      <Youtube className="h-5 w-5 text-red-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{source.name}</p>
-                      <p className="text-sm text-muted-foreground">{source.trackedCount} videos tracked</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Switch 
-                        checked={source.isActive}
-                        onCheckedChange={(checked) => updateSource(source.id, { isActive: checked })}
-                      />
-                      <span className="text-sm text-muted-foreground">Active</span>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => {
-                        deleteSource(source.id);
-                        toast({ title: "Source removed" });
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+              {youtubeSources.map((source) => renderSourceCard(source))}
             </div>
           </CardContent>
         </Card>
@@ -260,38 +434,7 @@ const Sources = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {rssSources.map((source) => (
-                <div key={source.id} className="flex items-center justify-between p-4 rounded-lg border bg-card">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10">
-                      <Rss className="h-5 w-5 text-orange-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{source.name}</p>
-                      <p className="text-sm text-muted-foreground">{source.url} • {source.trackedCount} articles tracked</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Switch 
-                        checked={source.isActive}
-                        onCheckedChange={(checked) => updateSource(source.id, { isActive: checked })}
-                      />
-                      <span className="text-sm text-muted-foreground">Active</span>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => {
-                        deleteSource(source.id);
-                        toast({ title: "Source removed" });
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+              {rssSources.map((source) => renderSourceCard(source))}
             </div>
           </CardContent>
         </Card>

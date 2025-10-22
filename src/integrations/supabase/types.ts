@@ -65,6 +65,7 @@ export type Database = {
           sent_at: string | null
           status: string | null
           subject: string
+          trend_ids: string[] | null
           updated_at: string
           user_id: string
         }
@@ -76,6 +77,7 @@ export type Database = {
           sent_at?: string | null
           status?: string | null
           subject: string
+          trend_ids?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -87,6 +89,7 @@ export type Database = {
           sent_at?: string | null
           status?: string | null
           subject?: string
+          trend_ids?: string[] | null
           updated_at?: string
           user_id?: string
         }
