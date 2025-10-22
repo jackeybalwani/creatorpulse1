@@ -43,18 +43,23 @@ const Sources = () => {
     }
   };
 
+  const handleQuickAddSource = (type: SourceType, name: string, url: string) => {
+    addSource({
+      type,
+      name,
+      url,
+      isActive: true,
+      trackedCount: 0,
+    });
+
+    toast({
+      title: "Source Added!",
+      description: `Successfully added ${name}`,
+    });
+  };
+
   const handleAddSource = () => {
-    // Auto-configure URL for certain source types
-    let finalUrl = sourceUrl;
-    let finalName = sourceName;
-    
-    if (sourceType === 'google-trends') {
-      finalUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=US';
-      finalName = finalName || 'Google Trends US';
-    } else if (sourceType === 'hacker-news') {
-      finalUrl = 'https://news.ycombinator.com/rss';
-      finalName = finalName || 'Hacker News Front Page';
-    } else if (!sourceUrl.trim()) {
+    if (!sourceUrl.trim()) {
       toast({
         title: "Error",
         description: "Please enter a URL or handle",
@@ -63,18 +68,18 @@ const Sources = () => {
       return;
     }
 
-    const name = finalName || (sourceUrl.startsWith('@') ? sourceUrl : sourceUrl.split('/').pop() || sourceUrl);
+    const name = sourceName || (sourceUrl.startsWith('@') ? sourceUrl : sourceUrl.split('/').pop() || sourceUrl);
     addSource({
       type: sourceType,
       name,
-      url: finalUrl,
+      url: sourceUrl,
       isActive: true,
       trackedCount: 0,
     });
 
     toast({
       title: "Source Added!",
-      description: `Successfully added ${name} to your sources`,
+      description: `Successfully added ${name}`,
     });
 
     setSourceUrl('');
@@ -150,7 +155,7 @@ const Sources = () => {
         </div>
         <Button
           onClick={handleSyncSources}
-          disabled={syncing || sources.length === 0}
+          disabled={syncing || sources.filter(s => s.isActive).length === 0}
           className="gap-2"
         >
           {syncing ? (
@@ -161,10 +166,74 @@ const Sources = () => {
         </Button>
       </div>
 
-      {/* Add New Source */}
+      {/* Quick Add Sources */}
       <Card>
         <CardHeader>
-          <CardTitle>Connect New Source</CardTitle>
+          <CardTitle>Quick Add Sources</CardTitle>
+          <CardDescription>Add popular sources with one click</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-2 p-4"
+              onClick={() => handleQuickAddSource(
+                'google-trends',
+                'Google Trends US',
+                'https://trends.google.com/trends/trendingsearches/daily/rss?geo=US'
+              )}
+            >
+              <TrendingUp className="h-5 w-5 text-purple-500" />
+              <span className="font-medium">Google Trends</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-2 p-4"
+              onClick={() => handleQuickAddSource(
+                'hacker-news',
+                'Hacker News Front Page',
+                'https://news.ycombinator.com/rss'
+              )}
+            >
+              <Hash className="h-5 w-5 text-orange-500" />
+              <span className="font-medium">Hacker News</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-2 p-4"
+              onClick={() => {
+                const name = prompt('Enter a name for this Reddit source (e.g., "r/technology"):');
+                const url = prompt('Enter subreddit URL (e.g., https://www.reddit.com/r/technology):');
+                if (name && url) {
+                  handleQuickAddSource('reddit', name, url);
+                }
+              }}
+            >
+              <MessageSquare className="h-5 w-5 text-orange-500" />
+              <span className="font-medium">Reddit</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-2 p-4"
+              onClick={() => {
+                const name = prompt('Enter a name for this Google Alert:');
+                const url = prompt('Enter Google Alerts RSS URL:');
+                if (name && url) {
+                  handleQuickAddSource('google-alerts', name, url);
+                }
+              }}
+            >
+              <Bell className="h-5 w-5 text-green-500" />
+              <span className="font-medium">Google Alerts</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add Custom Source */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Add Custom Source</CardTitle>
           <CardDescription>Add Twitter/X handles, YouTube channels, or RSS feeds</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -177,66 +246,34 @@ const Sources = () => {
                 onChange={(e) => setSourceType(e.target.value as SourceType)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value="google-trends">Google Trends</option>
-                <option value="reddit">Reddit</option>
-                <option value="hacker-news">Hacker News</option>
-                <option value="google-alerts">Google Alerts</option>
                 <option value="twitter">Twitter/X Handle</option>
                 <option value="youtube">YouTube Channel</option>
                 <option value="rss">RSS Feed</option>
+                <option value="reddit">Reddit</option>
+                <option value="google-alerts">Google Alerts</option>
               </select>
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="source-url">
-                {sourceType === 'google-trends' || sourceType === 'hacker-news' ? 'Source Name (Optional)' : 'URL or Handle'}
-              </Label>
+              <Label htmlFor="source-url">URL or Handle</Label>
               <div className="flex gap-2">
                 <Input 
                   id="source-url" 
                   placeholder={
-                    sourceType === 'google-trends' ? "Google Trends (auto-configured)" :
                     sourceType === 'reddit' ? "https://www.reddit.com/r/technology" :
-                    sourceType === 'hacker-news' ? "Hacker News (auto-configured)" :
                     sourceType === 'google-alerts' ? "Google Alerts RSS Feed URL" :
                     sourceType === 'rss' ? "https://example.com/feed.xml" :
                     sourceType === 'youtube' ? "Channel ID" :
                     "@twitter_handle"
                   }
                   className="flex-1"
-                  value={sourceType === 'google-trends' || sourceType === 'hacker-news' ? sourceName : sourceUrl}
-                  onChange={(e) => {
-                    if (sourceType === 'google-trends' || sourceType === 'hacker-news') {
-                      setSourceName(e.target.value);
-                    } else {
-                      setSourceUrl(e.target.value);
-                    }
-                  }}
+                  value={sourceUrl}
+                  onChange={(e) => setSourceUrl(e.target.value)}
                 />
                 <Button onClick={handleAddSource}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add
                 </Button>
               </div>
-              {sourceType === 'google-trends' && (
-                <p className="text-xs text-muted-foreground">
-                  Automatically syncs daily trending searches from Google Trends (US). No URL needed.
-                </p>
-              )}
-              {sourceType === 'reddit' && (
-                <p className="text-xs text-muted-foreground">
-                  Enter a subreddit URL (e.g., https://www.reddit.com/r/technology). The system will fetch the RSS feed.
-                </p>
-              )}
-              {sourceType === 'hacker-news' && (
-                <p className="text-xs text-muted-foreground">
-                  Automatically syncs the Hacker News front page. No URL needed.
-                </p>
-              )}
-              {sourceType === 'google-alerts' && (
-                <p className="text-xs text-muted-foreground">
-                  Get RSS feed from <a href="https://www.google.com/alerts" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Google Alerts</a> → Manage Alerts → Click RSS icon
-                </p>
-              )}
             </div>
           </div>
         </CardContent>
