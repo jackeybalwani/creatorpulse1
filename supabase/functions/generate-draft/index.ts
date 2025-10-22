@@ -135,20 +135,24 @@ Create an enterprise-grade newsletter with clean HTML fragment formatting:
 5. **Commentary/Analysis**: Your expert take (1-2 paragraphs)
 6. **Closing**: Strong CTA and sign-off
 
-CRITICAL: Output ONLY HTML fragments, NOT a complete HTML document. Do NOT include <!DOCTYPE>, <html>, <head>, <body>, or <style> tags.
+CRITICAL FORMATTING RULES:
+- Output ONLY clean HTML fragments (NO <!DOCTYPE>, <html>, <head>, <body>, or <style> tags)
+- Do NOT include ANY escape sequences like \n, \t, \r, or \\
+- Write HTML as continuous text without literal newlines or tabs
+- Use proper HTML tags for structure, not escape characters
 
 Use these HTML elements:
 - <h2> for section headlines
-- <p> for paragraphs
+- <p> for paragraphs  
 - <strong> or <b> for emphasis
 - <ul> and <li> for bullet lists
 - <a href="https://example.com"> for links
 - <hr> for section dividers
 
-Format your response as JSON:
+Format your response as clean JSON with NO escape sequences:
 {
   "subject": "Your subject line here",
-  "content": "HTML fragment content starting with <p> tags, no doctype or html wrapper"
+  "content": "<p>HTML content with proper tags but NO \\n or \\t characters</p><h2>Next Section</h2><p>More content...</p>"
 }`;
 
     console.log('Calling Lovable AI...');
@@ -192,22 +196,31 @@ Format your response as JSON:
     }
     
     const generatedText = data.choices[0].message.content;
-    console.log('Generated text:', generatedText);
+    console.log('Generated text (first 200 chars):', generatedText.substring(0, 200));
 
-    // Function to clean and unescape content
+    // Aggressive content cleaning function
     const cleanContent = (text: string): string => {
-      return text
-        // Remove literal escape sequences
-        .replace(/\\n/g, '\n')
-        .replace(/\\t/g, ' ')
-        .replace(/\\r/g, '')
-        .replace(/\\\\/g, '\\')
-        .replace(/\\"/g, '"')
-        // Remove any remaining backslash-escaped characters
-        .replace(/\\([^\\])/g, '$1')
-        // Clean up excessive whitespace
-        .replace(/\n\s*\n\s*\n/g, '\n\n')
+      let cleaned = text;
+      
+      // First pass: Remove all backslash escape sequences
+      cleaned = cleaned
+        .replace(/\\n/g, '') // Remove literal \n
+        .replace(/\\t/g, '') // Remove literal \t  
+        .replace(/\\r/g, '') // Remove literal \r
+        .replace(/\\\\/g, '\\') // Convert \\ to \
+        .replace(/\\"/g, '"') // Convert \" to "
+        .replace(/\\'/g, "'"); // Convert \' to '
+      
+      // Second pass: Remove any remaining backslash-escaped characters
+      cleaned = cleaned.replace(/\\(.)/g, '$1');
+      
+      // Third pass: Clean up whitespace but preserve HTML structure
+      cleaned = cleaned
+        .replace(/>\s+</g, '><') // Remove whitespace between tags
+        .replace(/\s{2,}/g, ' ') // Collapse multiple spaces
         .trim();
+      
+      return cleaned;
     };
 
     // Try to parse as JSON, fallback to text parsing
@@ -225,7 +238,8 @@ Format your response as JSON:
         subject: cleanContent(parsed.subject || 'Weekly Newsletter Update'),
         content: cleanContent(parsed.content || '')
       };
-    } catch {
+    } catch (parseError) {
+      console.error('JSON parse failed, using fallback:', parseError);
       // Fallback: extract subject and content from text
       const subjectMatch = generatedText.match(/"subject":\s*"([^"]+)"/);
       const contentMatch = generatedText.match(/"content":\s*"([\s\S]+?)"\s*\}/);
@@ -236,7 +250,8 @@ Format your response as JSON:
       };
     }
 
-    console.log('Returning draft:', result);
+    console.log('Cleaned subject:', result.subject);
+    console.log('Cleaned content (first 200 chars):', result.content.substring(0, 200));
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
