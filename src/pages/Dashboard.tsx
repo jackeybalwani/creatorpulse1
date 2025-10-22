@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { DraftConfigDialog, DraftConfig } from "@/components/DraftConfigDialog";
 
 const Dashboard = () => {
   const { sources, trends, drafts, generateDraft } = useApp();
@@ -15,6 +16,8 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [avgRating, setAvgRating] = useState<number>(0);
   const [feedbackCount, setFeedbackCount] = useState<number>(0);
+  const [showDraftConfig, setShowDraftConfig] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   const latestDraft = drafts[drafts.length - 1];
   const activeSources = sources.filter(s => s.isActive).length;
@@ -39,13 +42,29 @@ const Dashboard = () => {
     loadFeedbackStats();
   }, [drafts]);
 
-  const handleGenerateDraft = () => {
-    generateDraft();
-    toast({
-      title: "Draft Generated!",
-      description: "Your new newsletter draft is ready for review.",
-    });
-    navigate("/drafts");
+  const handleOpenDraftConfig = () => {
+    setShowDraftConfig(true);
+  };
+
+  const handleGenerateDraft = async (config: DraftConfig) => {
+    setIsGenerating(true);
+    try {
+      await generateDraft(config);
+      toast({
+        title: "Draft Generated!",
+        description: "Your new newsletter draft is ready for review.",
+      });
+      setShowDraftConfig(false);
+      navigate("/drafts");
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate draft. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -72,7 +91,7 @@ const Dashboard = () => {
               <FileText className="h-4 w-4" />
               {latestDraft ? 'Review Draft' : 'View Drafts'}
             </Button>
-            <Button size="lg" variant="outline" className="gap-2" onClick={handleGenerateDraft}>
+            <Button size="lg" variant="outline" className="gap-2" onClick={handleOpenDraftConfig}>
               <Sparkles className="h-4 w-4" />
               Generate New
             </Button>
@@ -140,7 +159,7 @@ const Dashboard = () => {
           {drafts.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No drafts yet. Generate your first one!</p>
-              <Button onClick={handleGenerateDraft} className="gap-2">
+              <Button onClick={handleOpenDraftConfig} className="gap-2">
                 <Sparkles className="h-4 w-4" />
                 Generate Draft
               </Button>
@@ -204,6 +223,15 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Draft Configuration Dialog */}
+      <DraftConfigDialog
+        open={showDraftConfig}
+        onOpenChange={setShowDraftConfig}
+        trends={trends}
+        onGenerate={handleGenerateDraft}
+        isGenerating={isGenerating}
+      />
     </div>
   );
 };

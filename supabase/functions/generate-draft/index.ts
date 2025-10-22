@@ -21,15 +21,16 @@ const trendSchema = z.object({
 });
 
 const preferencesSchema = z.object({
-  writingStyle: z.string().min(1).max(200),
-  tone: z.string().min(1).max(100),
-  length: z.enum(['short', 'medium', 'long']),
-  topics: z.array(z.string().max(100)).max(20),
+  writingStyle: z.string().min(1).max(500).default("Clear, engaging, and informative"),
+  tone: z.string().min(1).max(100).default("professional"),
+  length: z.enum(['short', 'medium', 'long']).default('medium'),
+  topics: z.array(z.string().max(100)).max(20).default(["AI", "Technology"]),
 });
 
 const generateDraftSchema = z.object({
   trends: z.array(trendSchema).min(1).max(20),
   preferences: preferencesSchema,
+  subjectLine: z.string().max(200).optional(),
   pastNewsletters: z.array(z.object({
     content: z.string().max(10000)
   })).max(10).optional(),
@@ -87,7 +88,7 @@ serve(async (req) => {
       );
     }
 
-    const { trends, preferences, pastNewsletters = [] } = validatedData;
+    const { trends, preferences, subjectLine, pastNewsletters = [] } = validatedData;
     console.log('Validated - Trends:', trends.length, 'items, Past newsletters:', pastNewsletters.length);
 
     if (!lovableApiKey) {
@@ -123,7 +124,7 @@ Focus Topics: ${preferences.topics.join(', ')}${styleContext}
 
 Create an enterprise-grade newsletter with proper HTML formatting including:
 
-1. **Subject Line**: Compelling, under 60 characters
+1. **Subject Line**: ${subjectLine ? `Use this subject: "${subjectLine}"` : 'Create a compelling subject under 60 characters'}
 2. **Opening Hook**: 1-2 sentence attention grabber
 3. **Introduction**: Brief context paragraph (2-3 sentences)
 4. **Main Content**: 3-4 trend sections, each with:

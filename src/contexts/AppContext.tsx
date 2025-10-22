@@ -14,7 +14,7 @@ interface AppContextType {
   addSource: (source: Omit<Source, 'id' | 'addedAt'>) => void;
   updateSource: (id: string, updates: Partial<Source>) => void;
   deleteSource: (id: string) => void;
-  generateDraft: () => Promise<void>;
+  generateDraft: (config?: any) => Promise<void>;
   updateDraft: (id: string, updates: Partial<Draft>) => void;
   sendDraft: (id: string) => Promise<void>;
   submitFeedback: (feedback: DraftFeedback) => Promise<void>;
@@ -216,7 +216,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const generateDraft = async () => {
+  const generateDraft = async (config?: any) => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -232,10 +232,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         description: "AI is analyzing trends and creating your newsletter",
       });
 
+      // Use config if provided, otherwise use defaults
+      const draftPreferences = config ? {
+        writingStyle: config.writingStyle || "Clear, engaging, and informative",
+        tone: config.tone || preferences?.tone || "professional",
+        length: config.length || preferences?.length || "medium",
+        topics: config.topics || preferences?.topics || ["AI", "Technology"]
+      } : {
+        writingStyle: preferences?.writingStyle || "Clear, engaging, and informative",
+        tone: preferences?.tone || "professional",
+        length: preferences?.length || "medium",
+        topics: preferences?.topics || ["AI", "Technology"]
+      };
+
+      // Filter trends based on config selection
+      const selectedTrends = config?.selectedTrends 
+        ? trends.filter(t => config.selectedTrends.includes(t.id))
+        : trends;
+
       const { data, error } = await supabase.functions.invoke('generate-draft', {
         body: { 
-          trends,
-          preferences 
+          trends: selectedTrends,
+          preferences: draftPreferences,
+          subjectLine: config?.subjectLine
         }
       });
 
