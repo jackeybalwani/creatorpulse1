@@ -1,17 +1,17 @@
-# CreatorPulse MVP PRD (Minimal Cost) - PRIMARY
+# CreatorPulse MVP PRD - PRIMARY
 
 > **✅ PRIMARY PRD**
 >
 > This is the **official PRD** for CreatorPulse MVP development.
 >
-> **Focus**: Minimal cost validation with free-tier services, SQLite, and open-source tools.
+> **Status**: MVP Implemented on Lovable Cloud with Supabase backend and Lovable AI integration
 >
-> **Note**: A production-grade PRD exists at [CreatorPulse_prd_per.md](./CreatorPulse_prd_per.md) for future reference after MVP validation.
+> **Last Updated**: January 2025
 
 ---
 
 ## 📝 Abstract
-CreatorPulse is a newsletter drafting tool that aggregates free content sources, detects emerging trends, and generates ready-to-send newsletters. The MVP focuses on validating user value (time saved, draft acceptance) using **free APIs, open-source AI models, and minimal cloud resources**.
+CreatorPulse is an AI-powered newsletter automation platform that aggregates content from multiple sources, detects emerging trends, and generates ready-to-send newsletter drafts. The MVP is built on **Lovable Cloud with Supabase backend** and uses **Lovable AI Gateway** for seamless AI model access without API key management.
 
 ---
 
@@ -82,21 +82,25 @@ CreatorPulse is a newsletter drafting tool that aggregates free content sources,
 
 ---
 
-## 📐 Model Requirements
-| SPECIFICATION | REQUIREMENT | RATIONALE |
-|---------------|------------|-----------|
-| Model | Open-source LLaMA / GPT-J | Free / low-cost MVP |
-| Context Window | 2–3k tokens | Handle past newsletters |
+## 📐 AI Model Requirements
+| SPECIFICATION | IMPLEMENTATION | NOTES |
+|---------------|----------------|-------|
+| AI Gateway | Lovable AI Gateway | No API key management required |
+| Primary Model | google/gemini-2.5-flash | Default for balanced performance/cost |
+| Alternative Models | google/gemini-2.5-pro, openai/gpt-5 | Available via same gateway |
+| Context Window | 4–8k tokens | Handles past newsletters + trends |
 | Modalities | Text only | MVP focus |
-| Fine Tuning | In-context learning only | Avoid paid training |
-| Latency | Acceptable for small batch drafts | Free-tier compute |
+| Fine Tuning | In-context learning via past newsletters | No model training required |
+| Latency | <10 seconds for draft generation | Production-ready performance |
 
 ---
 
 ## 🧮 Data Requirements
-- >20 past newsletters/posts per user uploaded manually  
-- SQLite / CSV storage for MVP  
-- Optional incremental improvement via manual feedback loop
+- **Past Newsletters:** Users can upload historical newsletters for style training
+- **Database:** PostgreSQL via Supabase with Row Level Security (RLS)
+- **Real-time Sync:** Source data synced and trends detected automatically
+- **Feedback Storage:** Draft feedback captured for continuous improvement
+- **User Preferences:** Customizable settings stored per user
 
 ---
 
@@ -151,13 +155,16 @@ CreatorPulse is a newsletter drafting tool that aggregates free content sources,
 
 ---
 
-## 🛠 Minimal Cost Tech Stack
-**Frontend:** React.js / simple HTML templates (optional)  
-**Backend:** Python FastAPI or Node.js Express (local / free-tier hosting)  
-**Database:** SQLite / Google Sheets / Airtable  
-**AI / ML:** Open-source LLaMA / GPT-J via Hugging Face free tier or local inference  
-**APIs:** Twitter/X free endpoints, YouTube public data, RSS feeds, Google Alerts, Gmail SMTP / MailerSend free tier  
-**Infrastructure:** Local deployment or free-tier cloud, cron jobs for scheduled draft generation
+## 🛠 Production Tech Stack (Implemented)
+**Frontend:** React 18.3 + TypeScript + Vite + Tailwind CSS  
+**UI Components:** shadcn/ui (Radix UI primitives)  
+**Backend:** Supabase (PostgreSQL + Authentication + Edge Functions)  
+**AI Integration:** Lovable AI Gateway (Gemini 2.5, GPT-5 models)  
+**Email Service:** Resend API for newsletter delivery  
+**State Management:** React Context API + React Query  
+**Validation:** Zod schemas for type-safe data validation  
+**Deployment:** Lovable Cloud with automatic CI/CD  
+**Edge Functions:** Deno-based serverless functions for backend logic
 
 ---
 

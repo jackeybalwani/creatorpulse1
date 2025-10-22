@@ -31,13 +31,29 @@ CreatorPulse automates the entire newsletter workflow:
 - **End-to-End Automation**: Complete workflow from source tracking to draft generation
 
 ## Technology Stack
-- **Frontend**: React, TypeScript, Tailwind CSS, Vite
-- **Backend**: Supabase (PostgreSQL, Authentication, Edge Functions)
-- **AI Integration**: Multi-model AI support (GPT-5, Gemini 2.5)
-- **Deployment**: Lovable Cloud platform
+- **Frontend**: React 18.3, TypeScript, Tailwind CSS, Vite, shadcn/ui
+- **Backend**: Supabase (PostgreSQL with RLS, Authentication, Edge Functions)
+- **AI Integration**: Lovable AI Gateway (Gemini 2.5, GPT-5) - no API key management
+- **Email Service**: Resend API for newsletter delivery
+- **State Management**: React Context API + React Query
+- **Deployment**: Lovable Cloud with automatic CI/CD
 
 ## Current Status
-✅ **Phase 1 Complete**: Core MVP with source management, trend detection, draft generation, and user authentication
+✅ **MVP Implemented**: Full-featured application with:
+- User authentication and authorization
+- Multi-source content aggregation
+- Interactive trend selection interface
+- AI-powered draft generation with style learning
+- Rich text editor with real-time preview
+- Automated email delivery
+- User feedback and analytics collection
+- Responsive UI with dark/light mode support
+
+🔧 **Recent Improvements**:
+- Fixed trend selection UI with multi-select capability
+- Resolved duplicate trends issue in database
+- Improved draft formatting (removed escape sequences)
+- Enhanced navigation and routing
 
 ## Business Model (Future)
 - Freemium tier with basic features
