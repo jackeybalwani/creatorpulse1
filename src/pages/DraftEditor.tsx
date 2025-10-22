@@ -2,8 +2,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar, MessageSquare, FileText } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ThumbsUp, ThumbsDown, Send, Sparkles, TrendingUp, Calendar, MessageSquare, FileText, Eye, Edit3, BarChart3, Mail, Clock, Hash } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
@@ -12,13 +15,16 @@ import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { DiffViewer } from "@/components/DiffViewer";
 
 const DraftEditor = () => {
-  const { drafts, trends, updateDraft, sendDraft, submitFeedback } = useApp();
+  const { drafts, trends, updateDraft, sendDraft, submitFeedback, preferences } = useApp();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
+  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
+  const [tone, setTone] = useState(preferences?.tone || "informative");
+  const [length, setLength] = useState(preferences?.length || "medium");
   
   const latestDraft = drafts[drafts.length - 1];
   const [subject, setSubject] = useState(latestDraft?.subject || '');
@@ -97,7 +103,7 @@ const DraftEditor = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -112,7 +118,7 @@ const DraftEditor = () => {
         </div>
       </div>
 
-      {/* AI Generation Info */}
+      {/* AI Generation Info & Quick Actions */}
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="flex items-center gap-3 p-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -164,62 +170,198 @@ const DraftEditor = () => {
         />
       )}
 
-      {/* Newsletter Content */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Newsletter Content</CardTitle>
-          <CardDescription>Edit the subject line and body of your newsletter</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Subject Line */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Subject Line</label>
-            <Textarea
-              className="resize-none font-medium"
-              rows={2}
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          </div>
+      {/* Main Editor Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Content Editor */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Customization Options */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Customization</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === "edit" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("edit")}
+                    className="gap-2"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant={viewMode === "preview" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("preview")}
+                    className="gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tone</label>
+                  <Select value={tone} onValueChange={setTone}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="informative">Informative</SelectItem>
+                      <SelectItem value="casual">Casual</SelectItem>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Length</label>
+                  <Select value={length} onValueChange={(value) => setLength(value as 'short' | 'medium' | 'long')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">Short</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="long">Long</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <Separator />
+          {/* Newsletter Content */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Newsletter Content</CardTitle>
+              <CardDescription>Edit the subject line and body of your newsletter</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {viewMode === "edit" ? (
+                <>
+                  {/* Subject Line */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Subject Line</label>
+                    <Input
+                      className="font-medium text-lg"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="Enter newsletter subject..."
+                    />
+                  </div>
 
-          {/* Main Content */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Content</label>
-            <Textarea
-              className="resize-none min-h-[500px] font-mono text-sm"
-              rows={20}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+                  <Separator />
 
-      {/* Trends Used */}
-      {latestDraft.trendIds.length > 0 && (
-        <Card className="border-accent/30 bg-accent/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-accent" />
-              Trends Included
-            </CardTitle>
-            <CardDescription>These trending topics were used to generate this draft</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {trends
-                .filter(t => latestDraft.trendIds.includes(t.id))
-                .map(trend => (
-                  <Badge key={trend.id} variant="outline">
-                    {trend.title}
-                  </Badge>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  {/* Main Content */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Content</label>
+                    <Textarea
+                      className="resize-none min-h-[600px] font-sans text-sm leading-relaxed"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Write your newsletter content here..."
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Preview Mode */}
+                  <div className="space-y-4 p-6 bg-muted/30 rounded-lg border">
+                    <h2 className="text-2xl font-bold">{subject || "Newsletter Subject"}</h2>
+                    <Separator />
+                    <div className="prose prose-sm max-w-none">
+                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{content || "Newsletter content will appear here..."}</pre>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Trends & Analytics */}
+        <div className="space-y-6">
+          {/* Trends Used */}
+          {latestDraft.trendIds.length > 0 && (
+            <Card className="border-accent/30 bg-accent/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <TrendingUp className="h-5 w-5 text-accent" />
+                  Trends Included
+                </CardTitle>
+                <CardDescription>Trending topics used in this draft</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {trends
+                  .filter(t => latestDraft.trendIds.includes(t.id))
+                  .map(trend => (
+                    <Card key={trend.id} className="p-3 border-accent/20">
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-medium text-sm line-clamp-2">{trend.title}</h4>
+                          <Badge variant="secondary" className="shrink-0">
+                            <Hash className="h-3 w-3 mr-1" />
+                            {trend.mentions}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{trend.description}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Badge variant="outline" className="text-xs">
+                            {trend.category}
+                          </Badge>
+                          <span>Sentiment: {(trend.sentiment * 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Analytics Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BarChart3 className="h-5 w-5" />
+                Expected Performance
+              </CardTitle>
+              <CardDescription>AI-predicted engagement metrics</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Open Rate</span>
+                  <span className="font-semibold">~35-42%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Click Rate</span>
+                  <span className="font-semibold">~8-12%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Readiness Score</span>
+                  <Badge variant="secondary" className="font-semibold">75%</Badge>
+                </div>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Mail className="h-3 w-3" />
+                  <span>Will be sent to {preferences?.emailAddress || 'your subscribers'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>Scheduled for {new Date(latestDraft.scheduledFor).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
 
       {/* Actions */}
       <div className="flex items-center justify-between p-6 rounded-lg border bg-card">
