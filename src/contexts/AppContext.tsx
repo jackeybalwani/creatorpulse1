@@ -264,6 +264,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const { subject, content } = data;
       
+      // Get trend IDs from selected trends
+      const trendIds = (config?.selectedTrends || selectedTrends.map(t => t.id)).slice(0, 5);
+      
       const { data: newDraft, error: insertError } = await supabase
         .from('drafts')
         .insert({
@@ -271,6 +274,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           subject,
           content,
           status: 'draft',
+          trend_ids: trendIds,
         })
         .select()
         .single();
@@ -284,7 +288,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         status: 'pending' as DraftStatus,
         generatedAt: newDraft.created_at,
         scheduledFor: newDraft.created_at,
-        trendIds: [],
+        trendIds: newDraft.trend_ids || [],
       }, ...drafts]);
       
       toast({
@@ -339,7 +343,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('send-newsletter', {
+      const { data, error } = await supabase.functions.invoke('send-newsletter', {
         body: {
           to: preferences.emailAddress,
           subject: draft.subject,
@@ -347,7 +351,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error sending newsletter:', error);
+        throw new Error(error.message || 'Failed to send newsletter');
+      }
 
       // Update draft status to sent
       await supabase

@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import DOMPurify from "https://esm.sh/isomorphic-dompurify@2.14.0";
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -50,13 +49,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending newsletter to:", to);
 
-    // Sanitize content to prevent XSS attacks
-    const sanitizedContent = DOMPurify.sanitize(content, {
-      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre'],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
-      ALLOW_DATA_ATTR: false,
-      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-    });
+    // Basic sanitization - remove script tags and dangerous attributes
+    let sanitizedContent = content
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/on\w+="[^"]*"/gi, '')
+      .replace(/on\w+='[^']*'/gi, '')
+      .replace(/javascript:/gi, '');
+    
+    // Ensure content is wrapped properly if it's just fragments
+    if (!sanitizedContent.includes('<html')) {
+      sanitizedContent = `<div>${sanitizedContent}</div>`;
+    }
 
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
