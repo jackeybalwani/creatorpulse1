@@ -125,6 +125,9 @@ CRITICAL: You MUST create UNIQUE, ORIGINAL content for each newsletter request. 
 
 ${styleContext ? 'Use the provided examples to match the writing style, but generate completely NEW content.' : ''}`;
 
+    // Extract main trend keywords for subject line guidance
+    const mainTrendKeywords = trends.slice(0, 2).map((t: any) => t.title).join(' & ');
+
     const userPrompt = `${uniqueContext}
 
 Write a UNIQUE newsletter draft based on these specific trending topics:
@@ -142,16 +145,16 @@ ${styleContext}
 Create a COMPLETELY NEW and UNIQUE enterprise-grade newsletter. DO NOT reuse content, examples, or phrasing from previous newsletters. Focus specifically on the trends listed above and create fresh, original analysis.
 
 **Newsletter Structure:**
-1. **Subject Line**: ${subjectLine ? `Use this subject: "${subjectLine}"` : 'Create a compelling, UNIQUE subject line under 60 characters that reflects the specific trends'}
-2. **Opening Hook**: 1-2 sentence attention grabber (make it specific to today's trends)
-3. **Introduction**: Brief context paragraph explaining why these specific trends matter NOW
-4. **Main Content**: Cover ${trends.length === 1 ? 'the trend in-depth' : `ALL ${trends.length} trends`}, each with:
-   - Bold headline with <h2> (specific to the trend)
-   - 2-3 paragraph analysis with UNIQUE insights
-   - Key takeaways as bullet points
-   - Relevant context or implications
-5. **Commentary/Analysis**: Your ORIGINAL expert perspective on how these trends connect or impact the industry
-6. **Closing**: Strong CTA and professional sign-off
+1. **Subject Line**: ${subjectLine ? `Use EXACTLY this subject: "${subjectLine}"` : `Create a compelling subject line under 60 characters that MUST include the main trend: "${mainTrendKeywords}". Make it specific, actionable, and directly reference the trend title(s).`}
+2. **Opening Hook**: 1-2 sentence attention grabber that DIRECTLY references "${trends[0].title}" by name
+3. **Introduction**: Brief context paragraph explaining why "${trends[0].title}"${trends.length > 1 ? ` and the other ${trends.length - 1} trend(s)` : ''} matter RIGHT NOW
+4. **Main Content**: Cover ${trends.length === 1 ? 'this specific trend in-depth' : `ALL ${trends.length} trends listed above`}, each with:
+   - Bold headline with <h2> that uses the EXACT trend title or a direct variation
+   - 2-3 paragraph analysis with UNIQUE insights specific to THIS trend
+   - Key takeaways as bullet points drawn from the trend description
+   - Real implications based on the trend's category and sentiment
+5. **Commentary/Analysis**: Your ORIGINAL expert perspective on how "${mainTrendKeywords}" ${trends.length > 1 ? 'and the other trends' : ''} connect or impact the industry
+6. **Closing**: Strong CTA related to the specific trends discussed and professional sign-off
 
 CRITICAL FORMATTING RULES:
 - Output ONLY clean HTML fragments (NO <!DOCTYPE>, <html>, <head>, <body>, or <style> tags)
